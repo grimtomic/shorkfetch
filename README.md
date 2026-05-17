@@ -14,17 +14,27 @@ shorkfetch is young, and I would love to hear from you if you have tried shorkfe
 
 
 
-## Building
+## Installing
 
-### Quick instructions
+### Arch
+
+shorkfetch is available on the [AUR](https://aur.archlinux.org/packages/shorkfetch).
+
+    yay -S shorkfetch
+
+### Everything else (quick compilation)
 
 _This assumes you already have the prerequisites for compilation already installed._
 
     curl -fsSL https://raw.githubusercontent.com/SharktasticA/shorkfetch/refs/heads/main/install.sh | bash
 
+
+
+## Building
+
 ### Requirements
 
-You just need a C compiler (tested with GCC with either glibc or musl) and make installed.
+You just need a C compiler (tested with GCC with either glibc or musl) and `make` installed.
 
 ### Compilation
 
