@@ -33,7 +33,7 @@ static const struct Replacement AMD_REPLACES[] = {
     { "K6 3D+",                 "K6-III",           0 },
     { "K6 3D",                  "K6-2",             0 },
     { "K6-III",                 "K6-2+/K6-III+",    1 },
-    { " with Radeon Graphics",   "",                0 }
+    { "RYZEN AI MAX+",          "Ryzen AI Max+",    0 }
 };
 static const int AMD_REPLACES_LEN = sizeof(AMD_REPLACES) / sizeof(AMD_REPLACES[0]);
 

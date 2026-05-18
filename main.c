@@ -2295,9 +2295,11 @@ char *getShell(void)
 }
 
 /**
- * @return String containing the CPU's name and core/thread specs; empty string if unknown
+ * @param gpuFromCPU A pointer to a string for returning an extracted GPU name
+ * @return String containing the CPU's name and core/thread specs; empty string
+ *         if unknown
  */
-char *getCPU(void)
+char *getCPU(char **gpuFromCPU)
 {
     char *cpu = malloc(134);
     char *vendor = malloc(16);
@@ -2319,7 +2321,7 @@ char *getCPU(void)
         free(cores);
         free(threads);
         free(fpu);
-        return strdup("unknown");
+        return NULL;
     }
     cpu[0] = vendor[0] = implementer[0] = model[0] = architecture[0] = processor[0] = cores[0] = threads[0] = fpu[0] = '\0';
 
@@ -2495,6 +2497,7 @@ char *getCPU(void)
         // Absolute fallback - we have nothing to show
         else if (cores[0] == '\0' && threads[0] == '\0' && processor[0] == '\0')
         {
+            free(cpu);
             free(vendor);
             free(implementer);
             free(model);
@@ -2503,7 +2506,7 @@ char *getCPU(void)
             free(cores);
             free(threads);
             free(fpu);
-            return cpu;
+            return NULL;
         }
 
 
@@ -2515,7 +2518,8 @@ char *getCPU(void)
 
         char coresAndThreads[16];
 
-        // If we don't have cores or threads, we use the processor field in its place
+        // If we don't have cores or threads, we use the processor field in its
+        // place
         if (cores[0] == '\0' && threads[0] == '\0')
         {
             int processorInt = atoi(processor);
@@ -2531,7 +2535,37 @@ char *getCPU(void)
 
 
 
-        // If we have no model name but we have core/thread count, just show the latter
+        // If the model name has GPU name in it, we will extract it and save if
+        // for later in case we need it as a fallback when GPU detection fails
+        // or produces no results
+        const char *gpuNeedles[] = { "with Radeon", "w/ Radeon", "with GeForce", "w/ GeForce" };
+        for (int i = 0; i < 4; i++)
+        {
+            char *found = strstr(model, gpuNeedles[i]);
+            if (found)
+            {
+                // Save it for later
+                *gpuFromCPU = malloc(134);
+                if (*gpuFromCPU)
+                {
+                    const char *gpuVendor = (i < 2) ? "AMD " : "NVIDIA ";
+                    snprintf(*gpuFromCPU, 134, "%s%s", gpuVendor, found + (strchr(gpuNeedles[i], ' ') - gpuNeedles[i]) + 1);
+                }
+
+                // Remove it from model name
+                *found = '\0';
+
+                // Make sure there isn't any trailing nonsense left
+                char *end = found - 1;
+                while (end > model && (*end == ' ' || *end == ',' || *end == '-'))
+                    *end-- = '\0';
+            }
+        }
+
+
+
+        // If we have no model name but we have core/thread count, just show
+        // the latter
         if (model[0] == '\0' && coresAndThreads[0] != '\0')
             strncpy(cpu, coresAndThreads, 133);
         // If we're in compact mode, we just show the model name
@@ -2546,7 +2580,19 @@ char *getCPU(void)
                 strncpy(cpu, model, 133);
         }
     }
-    else strcpy(cpu, "unknown");
+    else 
+    {
+        free(cpu);
+        free(vendor);
+        free(implementer);
+        free(model);
+        free(architecture);
+        free(processor);
+        free(cores);
+        free(threads);
+        free(fpu);
+        return NULL;
+    }
 
 
 
@@ -3219,7 +3265,8 @@ int main(int argc, char *argv[])
     char *trm = showTrm ? getTerminal() : NULL;
     char *shell = showSh ? getShell() : NULL;
 
-    char *cpu = showCPU ? getCPU() : NULL;
+    char *gpuFromCPU = NULL;
+    char *cpu = showCPU ? getCPU(&gpuFromCPU) : NULL;
     int noGPUs = 0;
     GPU *gpus = showGPU ? getGPUs(&noGPUs) : NULL;
     char *ram = showRAM ? getRAM(mi) : NULL;
@@ -3474,7 +3521,7 @@ int main(int argc, char *argv[])
         else printf(" %s%c%s %s\n", colAccent, bullet, colReset, cpu);
     }
 
-    if (gpus)
+    if (gpus && noGPUs > 0)
     {
         int pastFirstGPU = 0;
         for (int i = 0; i < noGPUs; i++)
@@ -3509,6 +3556,20 @@ int main(int argc, char *argv[])
             free(gpu);
             pastFirstGPU = 1;
         }
+    }
+    // If we found no GPUs the "traditional" way, at least check if we received
+    // a fallback found during CPU name processing
+    else if (gpuFromCPU && gpuFromCPU[0] != '\0')
+    {
+        if (showShork) printf("%s%s%s", colAccent, SHORK[shorkLine++], colReset);
+        if (!useBullets)
+        {
+            if (!COMPACT)
+                printf("%sGPU:%s      %s\n", colAccent, colReset, gpuFromCPU);
+            else
+                printf("%sGPU:%s %s\n", colAccent, colReset, gpuFromCPU);
+        }
+        else printf(" %s%c%s %s\n", colAccent, bullet, colReset, gpuFromCPU);
     }
 
     if (ram && ram[0] != '\0')
@@ -3613,6 +3674,7 @@ int main(int argc, char *argv[])
     free(trm);
     free(shell);
 
+    free(gpuFromCPU);
     free(cpu);
     if (gpus) free(gpus);
     free(root);
