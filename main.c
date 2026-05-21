@@ -2308,11 +2308,12 @@ char *getShell(void)
 }
 
 /**
+ * @param cpuInfo A file path to a cpuinfo file to read
  * @param gpuFromCPU A pointer to a string for returning an extracted GPU name
  * @return String containing the CPU's name and core/thread specs; empty string
  *         if unknown
  */
-char *getCPU(char **gpuFromCPU)
+char *getCPU(char *cpuInfo, char **gpuFromCPU)
 {
     char *cpu = malloc(134);
     char *vendor = malloc(16);
@@ -2340,7 +2341,7 @@ char *getCPU(char **gpuFromCPU)
 
 
 
-    FILE *fStream = fopen("/proc/cpuinfo", "r");
+    FILE *fStream = fopen(cpuInfo, "r");
     if (fStream)
     {
         // Use these to stop parsing once we have everything we need!
@@ -2833,6 +2834,56 @@ char *getLocalIP(void)
 
 #ifdef TESTS
 /**
+ * Tests the getCPU function to ensure it can correctly intepret our a set of
+ * cpuinfo examples and extract a GPU name if present in the CPU name
+ */
+void testGetCPU(void)
+{
+    DIR *testingDir = opendir("testing");
+    if (!testingDir) return;
+
+    printf("##################\n");
+    printf("## GET CPU TEST ##\n");
+    printf("##################\n");
+
+    char *cpuinfos[100];
+    int count = 0;
+
+    struct dirent *dirEntry;
+    while ((dirEntry = readdir(testingDir)) != NULL)
+    {
+        const char *ext = strrchr(dirEntry->d_name, '.');
+        if (ext == NULL || strcmp(ext, ".cpuinfo") != 0) continue;
+        cpuinfos[count++] = strdup(dirEntry->d_name);
+    }
+    closedir(testingDir);
+
+    int cmp(const void *a, const void *b) { return strcmp(*(const char **)a, *(const char **)b); }
+    qsort(cpuinfos, count, sizeof(char *), cmp);
+    for (int i = 0; i < count; i++)
+    {
+        char cpuinfo[PATH_MAX];
+        snprintf(cpuinfo, PATH_MAX, "testing/%s", cpuinfos[i]);
+
+        char bName[256];
+        strncpy(bName, cpuinfos[i], sizeof(bName) - 1);
+        bName[sizeof(bName) - 1] = '\0';
+        char *dot = strrchr(bName, '.');
+        if (dot) *dot = '\0';
+
+        char *gpuFromCPU = NULL;
+        char *cpu = getCPU(cpuinfo, &gpuFromCPU);
+
+        if (gpuFromCPU)
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m \033[36m(%s)\033[0m\n", bName, cpu, gpuFromCPU);
+        else
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m\n", bName, cpu);
+
+        free(cpu);
+        free(gpuFromCPU);
+    }
+}
+/**
  * Tests the interpretGPU function to ensure it finds and cleans GPU names as
  * we expect it to.
  */
@@ -3306,8 +3357,9 @@ int main(int argc, char *argv[])
 
 
 #ifdef TESTS
-    testInterpretGPU();
     testInterpretScreen();
+    testInterpretGPU();
+    testGetCPU();
     return 0;
 #endif
 
@@ -3329,7 +3381,7 @@ int main(int argc, char *argv[])
     char *shell = showSh ? getShell() : NULL;
 
     char *gpuFromCPU = NULL;
-    char *cpu = showCPU ? getCPU(&gpuFromCPU) : NULL;
+    char *cpu = showCPU ? getCPU("/proc/cpuinfo", &gpuFromCPU) : NULL;
     int noGPUs = 0;
     GPU *gpus = showGPU ? getGPUs(&noGPUs) : NULL;
     char *ram = showRAM ? getRAM(mi) : NULL;

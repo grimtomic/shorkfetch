@@ -16,7 +16,7 @@
 #ifndef IMPLEMENTERS
 #define IMPLEMENTERS
 
-static const char* ARM_IMPLEMENTERS[193] = {
+static const char *ARM_IMPLEMENTERS[193] = {
     [0x00] = "Reserved",
     [0x41] = "Arm",
     [0x42] = "Broadcom",
