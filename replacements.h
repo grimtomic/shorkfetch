@@ -130,6 +130,7 @@ static const struct Replacement INTEL_REPLACES[] = {
     { "OverDrive PODP5V83",     "Pentium OverDrive",    0 },
     { "Pentium 60/66",          "Pentium (P5)",         0 },
     { "Pentium 75 - 200",       "Pentium (P54C)",       0 },
+    { "Pentium II (Klamath)",   "Pentium II",           0 },
     { "Pentium II (Deschutes)", "Pentium II/Celeron",   0 },
     { "Celeron (Mendocino)",    "Celeron",              0 },
     { "Pentium 4 - M",          "Pentium 4-M",          0 },
