@@ -2463,7 +2463,7 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
 
 
 
-            // If we have a supposed AMD K6-III, it may actually be a K6-2+ or
+            // If we have a supposed K6-III, it may actually be a K6-2+ or
             // K6-III+, and we may be able to tell from the stepping
             if (strstr(model, "AMD-K6(tm)-III Processor"))
             {
@@ -2497,6 +2497,16 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
             {
                 char tmp[128];
                 snprintf(tmp, 128, "%s + 487", model);
+                strncpy(model, tmp, 127);
+                model[127] = '\0';
+            }
+
+            // If we have a supposed WinChip 2-3D, we may be able to tell if
+            // its a WinChip 2A from the stepping
+            if (strstr(model, "WinChip 2-3D") && stepping[0] == '7')
+            {
+                char tmp[128];
+                snprintf(tmp, 128, "IDT WinChip 2A", model);
                 strncpy(model, tmp, 127);
                 model[127] = '\0';
             }
