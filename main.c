@@ -2834,8 +2834,9 @@ char *getLocalIP(void)
 
 #ifdef TESTS
 /**
- * Tests the getCPU function to ensure it can correctly intepret our a set of
- * cpuinfo examples and extract a GPU name if present in the CPU name
+ * Tests the getCPU (and by extension the cleanCPUName) function to ensure they
+ * intepret our a set ofcpuinfo examples and extract a GPU name if present in
+ * the CPU name
  */
 void testGetCPU(void)
 {
