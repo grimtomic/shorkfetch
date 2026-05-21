@@ -644,4 +644,3 @@ model           : 9006-22P
 machine         : PowerNV 9006-22P
 firmware        : OPAL
 MMU             : Radix
-mk@p9-kde:~$ 

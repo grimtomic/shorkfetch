@@ -41,22 +41,13 @@ static const char *VERSION = "0.1.2-wip";
 
 
 
-typedef struct {
-    // Connector name (e.g., DP-1)
-    char *connector;
-    // Flags if this is the primary screen
-    int isPrimary;
-    // Physical width (mm)
-    float physX;
-    // Physical height (mm)
-    float physY;
-    // Resolution width (px)
-    int resX;
-    // Resolution height (px)
-    int resY;
-    // Refresh rate (Hz)
-    int refresh;
-} Screen;
+typedef enum
+{
+    UNKNOWN,
+    ARM,
+    POWER,
+    X86
+} CPUArch;
 
 typedef struct {
     char *name;
@@ -78,6 +69,23 @@ typedef struct {
     int pid;
     char name[256];
 } Process;
+
+typedef struct {
+    // Connector name (e.g., DP-1)
+    char *connector;
+    // Flags if this is the primary screen
+    int isPrimary;
+    // Physical width (mm)
+    float physX;
+    // Physical height (mm)
+    float physY;
+    // Resolution width (px)
+    int resX;
+    // Resolution height (px)
+    int resY;
+    // Refresh rate (Hz)
+    int refresh;
+} Screen;
 
 
 
@@ -2315,18 +2323,22 @@ char *getShell(void)
  */
 char *getCPU(char *cpuInfo, char **gpuFromCPU)
 {
-    char *cpu = malloc(134);
+    CPUArch arch;
+
+    char *result = malloc(134);
+    char *cpu = malloc(128);
     char *vendor = malloc(16);
     char *implementer = malloc(16);
     char *model = malloc(128);
     char *stepping = malloc(4);
     char *architecture = malloc(4);
-    char *processor = malloc(4);
-    char *cores = malloc(4);
-    char *threads = malloc(4);
+    char *processor = malloc(5);
+    char *cores = malloc(5);
+    char *threads = malloc(5);
     char *fpu = malloc(4);
-    if (!cpu || !vendor || !implementer || !model || !stepping || !architecture || !processor || !cores || !threads || !fpu) 
+    if (!result || !cpu || !vendor || !implementer || !model || !stepping || !architecture || !processor || !cores || !threads || !fpu) 
     {
+        free(result);
         free(cpu);
         free(vendor);
         free(implementer);
@@ -2339,7 +2351,7 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
         free(fpu);
         return NULL;
     }
-    cpu[0] = vendor[0] = implementer[0] = model[0] = stepping[0] = architecture[0] = processor[0] = cores[0] = threads[0] = fpu[0] = '\0';
+    result[0] = cpu[0] = vendor[0] = implementer[0] = model[0] = stepping[0] = architecture[0] = processor[0] = cores[0] = threads[0] = fpu[0] = '\0';
 
 
 
@@ -2357,8 +2369,8 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
         {
             if (strncmp(buffer, "processor", 9) == 0)
             {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                strncpy(processor, extract, 3);
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                strncpy(processor, extract, 4);
                 free(extract);
             }
             else if (strncmp(buffer, "vendor_id", 9) == 0)
@@ -2398,15 +2410,21 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
             }
             else if (strncmp(buffer, "cpu cores", 9) == 0)
             {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                strncpy(cores, extract, 3);
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                strncpy(cores, extract, 4);
                 free(extract);
                 parsed++;
             }
+            else if (strncmp(buffer, "cpu", 3) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 128, ':', 2);
+                strncpy(cpu, extract, 127);
+                free(extract);
+            }
             else if (strncmp(buffer, "siblings", 8) == 0)
             {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                strncpy(threads, extract, 3);
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                strncpy(threads, extract, 4);
                 free(extract);
                 parsed++;
             }
@@ -2428,9 +2446,11 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
 
 
 
-        // Typical CPU path
+        // Typical x86 path
         if (vendor[0] != '\0' || model[0] != '\0')
         {
+            arch = X86;
+
             // Check if model name lacks the vendor name and if we need to try adding it in manually
             if ((vendor[0] != '\0' && vendor[0] != 'u') && (model[0] != '\0' && model[0] != 'u'))
             {
@@ -2534,6 +2554,8 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
         // Possible ARM CPU path
         if (architecture[0] != '\0')
         {
+            arch = ARM;
+
             const char *implementerName = NULL;
             // Try to resolve implementer name 
             if (implementer[0] != '\0')
@@ -2549,9 +2571,23 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
             else
                 snprintf(model, 128, "Armv%d", atoi(architecture));
         }
-        // Absolute fallback - we have nothing to show
+        // Possible POWER CPU path
+        if (cpu[0] == 'P' && model[0] == '\0')
+        {
+            arch = POWER;
+
+            strncpy(model, cpu, 127);
+            model[127] = '\0';
+
+            // In cases like "POWER9, altivec supported", we want to remove the
+            // comma and everything after
+            char *comma = strchr(model, ',');
+            if (comma) *comma = '\0';
+        }
+        // Leave if have nothing to show...
         else if (cores[0] == '\0' && threads[0] == '\0' && processor[0] == '\0')
         {
+            free(result);
             free(cpu);
             free(vendor);
             free(implementer);
@@ -2576,11 +2612,17 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
 
         // If we don't have cores or threads, we use the processor field in its
         // place
-        if (cores[0] == '\0' && threads[0] == '\0')
+        if (cores[0] == '\0' && threads[0] == '\0' && processor[0] != '\0')
         {
             int processorInt = atoi(processor);
             processorInt++;
-            snprintf(coresAndThreads, 16, "%dC", processorInt);
+
+            // We don't have a good way to tell cores from threads for POWER
+            // CPUs at the moment, so let's not imply our value is for cores
+            if (arch == POWER)
+                snprintf(coresAndThreads, 16, "%dT", processorInt);
+            else
+                snprintf(coresAndThreads, 16, "%dC", processorInt);
         }
         // If cores and threads are the same value, just show cores
         else if (strcmp(cores, threads) == 0)
@@ -2623,21 +2665,22 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
         // If we have no model name but we have core/thread count, just show
         // the latter
         if (model[0] == '\0' && coresAndThreads[0] != '\0')
-            strncpy(cpu, coresAndThreads, 133);
+            strncpy(result, coresAndThreads, 133);
         // If we're in compact mode, we just show the model name
         else if (COMPACT)
-            strncpy(cpu, model, 133);
+            strncpy(result, model, 133);
         // Normal view
         else
         {
             if (coresAndThreads[0] != '\0')
-                snprintf(cpu, 134, "%s (%s)", model, coresAndThreads);
+                snprintf(result, 134, "%s (%s)", model, coresAndThreads);
             else
-                strncpy(cpu, model, 133);
+                strncpy(result, model, 133);
         }
     }
     else 
     {
+        free(result);
         free(cpu);
         free(vendor);
         free(implementer);
@@ -2657,6 +2700,7 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
     if (cores && cores[0] != '\0')
         coreCount = (int)strtol(cores, NULL, 10);
 
+    free(cpu);
     free(vendor);
     free(implementer);
     free(model);
@@ -2667,11 +2711,11 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
     free(threads);
     free(fpu);
 
-    char *cleanedCPU = cleanCPUName(cpu, 134, coreCount);
-    strncpy(cpu, cleanedCPU, 133);
+    char *cleanedCPU = cleanCPUName(result, 134, coreCount);
+    strncpy(result, cleanedCPU, 133);
     free(cleanedCPU);
 
-    return cpu;
+    return result;
 }
 
 /**
