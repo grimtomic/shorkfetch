@@ -38,7 +38,7 @@ Screen *getScreens(int *count)
     Screen *screens = NULL;
 
     // Try getting screens with xrandr (X11)
-    FILE *fStream = popen("xrandr 2>/dev/null", "r");
+    FILE *fStream = popen("xrandr --current 2>/dev/null", "r");
     if (fStream)
     {
         // What we use to read lines of xrandr output in to
