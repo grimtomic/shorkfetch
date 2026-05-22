@@ -329,14 +329,9 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
     FILE *fStream = fopen(cpuInfo, "r");
     if (fStream)
     {
-        // Use these to stop parsing once we have everything we need!
-        // lookingFor's default value is x86 orientated - the ARM-based path
-        // can change this to 2, hence not a const.
-        int lookingFor = 7;
-        int parsed = 0;
 
         char buffer[256];
-        while (fgets(buffer, sizeof(buffer), fStream) && parsed < lookingFor)
+        while (fgets(buffer, sizeof(buffer), fStream))
         {
             if (strncmp(buffer, "processor", 9) == 0)
             {
@@ -387,7 +382,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     vendor[15] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (modelName[0] == '\0' && strncmp(buffer, "model name", 10) == 0)
             {
@@ -398,7 +392,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     modelName[127] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (model[0] == '\0' && strncmp(buffer, "model", 5) == 0)
             {
@@ -409,7 +402,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     model[3] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (stepping[0] == '\0' && strncmp(buffer, "stepping", 8) == 0)
             {
@@ -420,7 +412,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     stepping[3] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (cacheSize[0] == '\0' && strncmp(buffer, "cache size", 10) == 0)
             {
@@ -441,7 +432,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     architecture[3] = '\0';
                     free(extract);
                 }
-                lookingFor = 2;
             }
             else if (cores[0] == '\0' && strncmp(buffer, "cpu cores", 9) == 0)
             {
@@ -452,7 +442,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     cores[4] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (cpu[0] == '\0' && strncmp(buffer, "cpu", 3) == 0)
             {
@@ -473,7 +462,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     threads[4] = '\0';
                     free(extract);
                 }
-                parsed++;
             }
             else if (fpu[0] == '\0' && strncmp(buffer, "fpu", 3) == 0)
             {
@@ -486,7 +474,6 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                         strncpy(fpu, "0", 2);
                     free(extract);
                 }
-                parsed++;
             }
         }
         fclose(fStream);
@@ -705,10 +692,33 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
 
 
 
-        // If we don't have a cores value, set it to the same as threads
-        // so we don't try to show them separately later
-        if (cores[0] == '\0' && threads[0] != '\0')
-            strncpy(cores, threads, 3);
+        // Parse the possible cores and threads counts to integers
+        int processorInt = 0;
+        if (processor[0] != '\0')
+        {
+            processorInt = atoi(processor);
+            // Processor count starts at 0, so +1...
+            processorInt++;
+        }
+
+        int coresInt = 0;
+        if (cores[0] != '\0')
+            coresInt = atoi(cores);
+
+        int threadsInt = 0;
+        if (threads[0] != '\0')
+            threadsInt = atoi(threads);
+
+        int hartInt = 0;
+        if (hart[0] != '\0')
+        {
+            hartInt = atoi(hart);
+            // The SiFive Freedom U540 (etc.) count from 1 instead of 0...
+            if (hartInt % 2 != 0)
+                hartInt++;
+        }
+
+
 
         char coresAndThreads[16] = "";
 
@@ -716,13 +726,15 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
         // count
         if (arch != RISCV)
         {
+            // If we don't have a cores value, set it to the same as threads
+            // so we don't try to show them separately later
+            if (cores[0] == '\0' && threads[0] != '\0')
+                strncpy(cores, threads, 3);
+
             // If we don't have cores or threads, we use the processor field in its
             // place
-            if (cores[0] == '\0' && threads[0] == '\0' && processor[0] != '\0')
+            if (coresInt == 0 && threadsInt == 0 && processorInt > 0)
             {
-                int processorInt = atoi(processor);
-                processorInt++;
-
                 // We don't have a good way to tell cores from threads for POWER
                 // CPUs at the moment, so let's not imply our value is for cores
                 if (arch == POWER)
@@ -731,51 +743,37 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                     snprintf(coresAndThreads, 16, "%dC", processorInt);
             }
             // If cores and threads are the same value, just show cores
-            else if (strcmp(cores, threads) == 0)
-                snprintf(coresAndThreads, 16, "%sC", cores);
+            else if (coresInt == threadsInt)
+                snprintf(coresAndThreads, 16, "%dC", coresInt);
             // If cores and threads are different values, show both
             else
-                snprintf(coresAndThreads, 16, "%sC/%sT", cores, threads);
+                snprintf(coresAndThreads, 16, "%dC/%dT", coresInt, threadsInt);
         }
         // For RISC-V specifically, we have processor and hart (hardware
         // thread) to work with
         else
         {
             // If we have processor...
-            if (processor[0] != '\0')
+            if (processorInt > 0)
             {
-                int processorInt = atoi(processor);
-                processorInt++;
-
                 // ...and hart
-                if (hart[0] != '\0')
+                if (hartInt > 0)
                 {
-                    int hartInt = atoi(hart);
-                    // The SiFive Freedom U540 (etc.) count from 1 instead of 0...
-                    if (hartInt % 2 != 0)
-                        hartInt++;
-
                     // If processors and hart are the same value, just show
                     // processors
                     if (processorInt == hartInt || hartInt == 0)
                         snprintf(coresAndThreads, 16, "%dC", processorInt);
                     // If processors and hart are different values, show both
                     else
-                        snprintf(coresAndThreads, 16, "%dC%dT", processorInt, hartInt);
+                        snprintf(coresAndThreads, 16, "%dC/%dT", processorInt, hartInt);
                 }
                 // ...only
                 else
                     snprintf(coresAndThreads, 16, "%dC", processorInt);
             }
             // If we only have hart...
-            else if (hart[0] != '\0')
-            {
-                int hartInt = atoi(hart);
-                // The SiFive Freedom U540 (etc.) count from 1 instead of 0...
-                if (hartInt % 2 != 0)
-                    hartInt++;
+            else if (hartInt > 0)
                 snprintf(coresAndThreads, 16, "%dC", hartInt);
-            }
         }
 
 
@@ -823,6 +821,16 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                 snprintf(result, 134, "%s (%s)", modelName, coresAndThreads);
             else
                 strncpy(result, modelName, 133);
+        }
+
+        // If the processor count is higher than the thread count, it's likely
+        // we're dealing with a multi-CPU configuration
+        if (processorInt > threadsInt && threadsInt > 0)
+        {
+            int cpus = processorInt / threadsInt;
+            char tmp[134];
+            snprintf(tmp, 134, "%dx %s", cpus, result);
+            strncpy(result, tmp, 133);
         }
     }
     else 
