@@ -2,7 +2,8 @@
     ######################################################
     ##            SHORK UTILITY - SHORKFETCH            ##
     ######################################################
-    ## Database of window managers and compositors.     ##
+    ## Functions and data relating to handling desktop  ##
+    ## environments and window managers                 ##
     ######################################################
     ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
     ######################################################
@@ -12,21 +13,29 @@
 
 
 
-#ifndef WMS
-#define WMS
+#ifndef DE_WM
+#define DE_WM
 
-struct WM {
+#include "general.h"
+#include "globals.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+
+
+typedef struct {
     // Command name substring
     const char *cmd;
     // Display name
     const char *name;
     // Flags if this WM is not normally for a DE
     const int noDE;
-};
+} WM;
 
 
 
-static const struct WM WINDOW_MANAGERS[] = {
+static const WM WINDOW_MANAGERS[] = {
     { "mutter-",        "Mutter",           0 },
     { "kwin_",          "KWin",             0 },
     { "xfwm",           "Xfwm",             0 },
@@ -61,5 +70,10 @@ static const struct WM WINDOW_MANAGERS[] = {
     { "weston",         "Weston",           1 },
 };
 static const int WINDOW_MANAGERS_LEN = sizeof(WINDOW_MANAGERS) / sizeof(WINDOW_MANAGERS[0]);
+
+
+
+char *getDE(void);
+char *getWM(char **);
 
 #endif

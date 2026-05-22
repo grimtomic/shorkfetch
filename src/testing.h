@@ -1,0 +1,309 @@
+/*
+    ######################################################
+    ##            SHORK UTILITY - SHORKFETCH            ##
+    ######################################################
+    ## Testing functions used when compiled with        ##
+    ## TESTS=1                                          ##
+    ######################################################
+    ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
+    ######################################################
+    ## Kali (links.sharktastica.co.uk)                  ##
+    ######################################################
+*/
+
+
+
+#ifdef TESTS
+
+#include "cpu.h"
+#include "gpu.h"
+
+#include <dirent.h>
+#include <linux/limits.h>
+
+
+
+/**
+ * Tests the getCPU (and by extension the cleanCPUName) function to ensure they
+ * intepret our a set ofcpuinfo examples and extract a GPU name if present in
+ * the CPU name
+ */
+void testGetCPU(void)
+{
+    DIR *testingDir = opendir("testing");
+    if (!testingDir) return;
+
+    printf("##################\n");
+    printf("## GET CPU TEST ##\n");
+    printf("##################\n");
+
+    char *cpuinfos[100];
+    int count = 0;
+
+    struct dirent *dirEntry;
+    while ((dirEntry = readdir(testingDir)) != NULL)
+    {
+        const char *ext = strrchr(dirEntry->d_name, '.');
+        if (ext == NULL || strcmp(ext, ".cpuinfo") != 0) continue;
+        cpuinfos[count++] = strdup(dirEntry->d_name);
+    }
+    closedir(testingDir);
+
+    int cmp(const void *a, const void *b) { return strcmp(*(const char **)a, *(const char **)b); }
+    qsort(cpuinfos, count, sizeof(char *), cmp);
+    for (int i = 0; i < count; i++)
+    {
+        char cpuinfo[PATH_MAX];
+        snprintf(cpuinfo, PATH_MAX, "testing/%s", cpuinfos[i]);
+
+        char bName[256];
+        strncpy(bName, cpuinfos[i], sizeof(bName) - 1);
+        bName[sizeof(bName) - 1] = '\0';
+        char *dot = strrchr(bName, '.');
+        if (dot) *dot = '\0';
+
+        char *gpuFromCPU = NULL;
+        char *cpu = getCPU(cpuinfo, &gpuFromCPU);
+
+        if (gpuFromCPU)
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m \033[36m(%s)\033[0m\n", bName, cpu, gpuFromCPU);
+        else
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m\n", bName, cpu);
+
+        free(cpu);
+        free(gpuFromCPU);
+    }
+}
+
+/**
+ * Tests the interpretGPU function to ensure it finds and cleans GPU names as
+ * we expect it to.
+ */
+void testInterpretGPU(void)
+{
+    printf("########################\n");
+    printf("## INTERPRET GPU TEST ##\n");
+    printf("########################\n");
+    
+    GPU_IDS gpus[] = {
+        {
+            "ATI FirePro V (FireGL V) Graphics Adapter",
+            0x1002,
+            0x6784,
+            0x00
+        },
+        {
+            "Caicos [Radeon HD 6450/7450/8450 / R5 230 OEM]",
+            0x1002,
+            0x6779,
+            -1
+        },
+        {
+            "Tahiti XT GL [FirePro W9000]",
+            0x1002,
+            0x6780,
+            -1
+        },
+        {
+            "AMD FirePro W9000",
+            0x1002,
+            0x6780,
+            0x00
+        },
+        {
+            "Navi 33 [Radeon RX 7600/7600 XT/7600M XT/7600S/7700S / PRO W7600]",
+            0x1002,
+            0x7480,
+            -1
+        },
+        {
+            "AMD Radeon RX 7700S",
+            0x1002,
+            0x7480, 
+            0xC1 
+        },
+        {
+            "NV11 [GeForce2 MX/MX 400]",
+            0x10de,
+            0x0110,
+            -1
+        },
+        {
+            "NV43M [GeForce Go6200 TE / 6600 TE]",
+            0x10de,
+            0x0146,
+            -1
+        },
+        {
+            "G92GLM [Quadro FX 3700M]",
+            0x10de,
+            0x061e,
+            -1
+        },
+        {
+            "G94 [GeForce 9600 GT Green Edition]",
+            0x10de,
+            0x0624,
+            -1
+        },
+        {
+            "G96 [GeForce 9500 GA / 9600 GT / GTS 250]",
+            0x10de,
+            0x065d,
+            -1
+        },
+        {
+            "GF110 [GeForce GTX 560 Ti OEM]",
+            0x10de,
+            0x1082,
+            -1
+        },
+        {
+            "GF110 [GeForce GTX 560 Ti 448 Cores]",
+            0x10de,
+            0x1087,
+            -1
+        },
+        {
+            "GM204M [GeForce GTX 960 OEM / 970M]",
+            0x10de,
+            0x13d8,
+            -1
+        },
+        {
+            "GM204 [GeForce GTX 980]",
+            0x10de,
+            0x13c0,
+            0xa1
+        },
+        {
+            "TU104GLM [Quadro RTX 5000 Mobile / Max-Q]",
+            0x10de,
+            0x1eb5,
+            -1
+        },
+        {
+            "TU106 [GeForce RTX 2070 Rev. A]",
+            0x10de,
+            0x1f07,
+            -1
+        },
+        {
+            "AD103 [GeForce RTX 4080 SUPER]",
+            0x10de,
+            0x2702,
+            -1
+        }
+    };
+    const int noGPUs = sizeof(gpus) / sizeof(gpus[0]);
+
+    for (int i = 0; i < noGPUs; i++)
+    {
+        char *gpu = interpretGPU(&gpus[i]);
+        if (gpu && gpu[0] != '\0')
+        {
+            if (gpus[i].revision == -1)
+                printf("%04x:%04x:--: \033[31m%s\033[0m -> \033[32m%s\033[0m\n", gpus[i].vendor, gpus[i].device, gpus[i].name, gpu);
+            else
+                printf("%04x:%04x:%02X: \033[31m%s\033[0m -> \033[32m%s\033[0m\n", gpus[i].vendor, gpus[i].device, gpus[i].revision, gpus[i].name, gpu);
+        }
+        free(gpu);
+    }
+}
+
+/**
+ * Tests the interpretScreen function to ensure it assembles screen specs
+ * strings as we expect it to.
+ */
+void testInterpretScreen(void)
+{
+    printf("###########################\n");
+    printf("## INTERPRET SCREEN TEST ##\n");
+    printf("###########################\n");
+
+    Screen screens[] = {
+        // table.flip 34"
+        {
+            strdup("DP-3"),
+            1,
+            800.000000,
+            335.000000,
+            3440,
+            1440,
+            0
+        },
+        // SN-MAIN 34"
+        {
+            strdup("DP-4"),
+            1,
+            798.000000,
+            334.000000,
+            3440,
+            1440,
+            100
+        },
+        // table.flip - 27"
+        {
+            strdup("DP-4"),
+            1,
+            597.000000,
+            336.000000,
+            2560,
+            1440,
+            0
+        },
+        // W530
+        {
+            strdup("LVDS-1-1"),
+            1,
+            344.000000,
+            193.000000,
+            1920,
+            1080,
+            60
+        },
+        // R500
+        {
+            strdup("LVDS"),
+            1,
+            331.000000,
+            207.000000,
+            1650,
+            1050,
+            60
+        },
+        // L430
+        {
+            strdup("LVDS-1"),
+            1,
+            309.000000,
+            174.000000,
+            1366,
+            768,
+            60
+        },
+        // T480
+        {
+            strdup("eDP-1"),
+            1,
+            309.000000,
+            173.000000,
+            1920,
+            1080,
+            60
+        }
+    };
+    const int noScreens = sizeof(screens) / sizeof(screens[0]);
+
+    for (int i = 0; i < noScreens; i++)
+    {
+        char *screen = interpretScreen(&screens[i]);
+        float diagMm = fSqrt(screens[i].physX * screens[i].physX + screens[i].physY * screens[i].physY);
+        float diagIn = (float)diagMm / 25.4f;
+        if (screen && screen[0] != '\0')
+            printf("\033[31m%f\"\033[0m -> \033[32m%s\033[0m\n", diagIn, screen, screen);
+        free(screen);
+    }
+}
+
+#endif

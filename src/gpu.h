@@ -2,8 +2,8 @@
     ######################################################
     ##            SHORK UTILITY - SHORKFETCH            ##
     ######################################################
-    ## Hard-coded Intel iGPU names via Device ID lookup ##
-    ## to be used to replace messy data from pci.ids.   ##
+    ## Functions and data relating to handling GPUs/    ##
+    ## graphics cards                                   ##
     ######################################################
     ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
     ######################################################
@@ -13,11 +13,22 @@
 
 
 
-#ifndef IGPUS
-#define IGPUS
+#ifndef GPU
+#define GPU
 
+typedef struct {
+    char *name;
+    int vendor;
+    int device;
+    int revision;
+} GPU_IDS;
+
+
+
+// Harcoded Intel iGPU names to use via device ID lookup to replace "messy"
+// data from pci.ids
 static const char* INTEL_IGPUS[] = {
-//  DID:     Name:                                      Example host CPUs:  
+//  DID:       Name:                                       Example host CPUs:
     [0x0042] = "HD Graphics (Clarkdale)",               // Core i5-650
     [0x0046] = "HD Graphics (Arrandale)",               // Core i3-380M
     //[004a] = "UNKNOWN Clarkdale/Arrandale?",          // 
@@ -268,5 +279,11 @@ static const char* INTEL_IGPUS[] = {
     [0xa7ac] = "Graphics (80-96EU)",                    // Core 5 120U/7 150U
     [0xa7ad] = "Graphics (64EU)"                        // Core 3 100U
 };
+
+
+
+char *interpretGPU(GPU_IDS*);
+char *cleanGPUName(const char*, const char*, const size_t);
+GPU_IDS* getGPUs(int *);
 
 #endif

@@ -18,7 +18,7 @@ ifdef TESTS
 	CFLAGS += -DTESTS
 endif
 
-SRC = main.c
+SRC = src/*.c
 
 shorkfetch: $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o shorkfetch $(LDFLAGS)

@@ -26,7 +26,7 @@ static const int EXCLUDED_PCI_DIDS_LEN = sizeof(EXCLUDED_PCI_DIDS) / sizeof(EXCL
 
 // Process names that should be excluded when looking for the host terminal's
 // name
-const char *EXCLUDED_TERMINAL_PROCS[] = {
+static const char *EXCLUDED_TERMINAL_PROCS[] = {
     // Shells
     "bash",
     "sh",
@@ -43,7 +43,7 @@ const char *EXCLUDED_TERMINAL_PROCS[] = {
     "ion",
     "xonsh",
     "rc",
-    "zensh"
+    "zensh",
 
     // Wrappers
     "sudo",

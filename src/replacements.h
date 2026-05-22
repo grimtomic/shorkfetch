@@ -14,8 +14,8 @@
 
 
 
-#ifndef CPUS
-#define CPUS
+#ifndef REPLACEMENTS
+#define REPLACEMENTS
 
 struct Replacement {
     const char *match;
@@ -85,7 +85,7 @@ static const int COMPACT_OS_REPLACES_LEN = sizeof(COMPACT_OS_REPLACES) / sizeof(
 
 
 
-const char *DELETIONS[] =
+static const char *DELETIONS[] =
 {
     ", Inc.",
     ", Inc",

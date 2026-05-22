@@ -2,8 +2,7 @@
     ######################################################
     ##            SHORK UTILITY - SHORKFETCH            ##
     ######################################################
-    ## Hard-coded CPU implementer values to allow basic ##
-    ## vendor identification for ARM CPUs.              ##
+    ## Functions and data relating to handling CPUs     ##
     ######################################################
     ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
     ######################################################
@@ -13,9 +12,25 @@
 
 
 
-#ifndef IMPLEMENTERS
-#define IMPLEMENTERS
+#ifndef CPU
+#define CPU
 
+#include <stdio.h>
+
+
+
+typedef enum
+{
+    UNKNOWN,
+    ARM,
+    POWER,
+    X86
+} CPUArch;
+
+
+
+// Hardcoded ARM CPU implementer values to allow basic ARM CPU vendor
+// identification
 static const char *ARM_IMPLEMENTERS[193] = {
     [0x00] = "Reserved",
     [0x41] = "Arm",
@@ -32,5 +47,10 @@ static const char *ARM_IMPLEMENTERS[193] = {
     [0x69] = "Intel",
     [0xC0] = "Ampere"
 };
+
+
+
+char *cleanCPUName(const char *, size_t, int);
+char *getCPU(char *, char **);
 
 #endif

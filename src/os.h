@@ -1,0 +1,25 @@
+/*
+    ######################################################
+    ##            SHORK UTILITY - SHORKFETCH            ##
+    ######################################################
+    ## Functions and data relating to handle the        ##
+    ## operating system's name                          ##
+    ######################################################
+    ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
+    ######################################################
+    ## Kali (links.sharktastica.co.uk)                  ##
+    ######################################################
+*/
+
+
+
+#ifndef OS
+#define OS
+
+#include <sys/utsname.h>
+
+
+
+char *getOS(struct utsname, int);
+
+#endif
