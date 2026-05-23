@@ -45,6 +45,7 @@ static const char *ARM_IMPLEMENTERS[193] = {
     [0x50] = "AMCC",
     [0x51] = "Qualcomm",
     [0x56] = "Marvell",
+    [0x61] = "Apple",
     [0x69] = "Intel",
     [0xC0] = "Ampere"
 };
