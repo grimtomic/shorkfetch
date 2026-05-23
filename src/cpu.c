@@ -597,9 +597,11 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                 modelName[127] = '\0';
             }
 
-            // Celeron (Covington) has mostly the same values as Pentium II
-            // (Deschutes), including calling itself "Pentium II (Deschutes)",
-            // so we must distinguish it via cache size (32KB vs 512KB)
+            // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
+            // and Celeron (Covington) have basically the same CPU ID, but we
+            // can tell *some* apart from the cache size. For sure: 32KB =
+            // Celeron; 512KB = Pentium II; 1024/2048KB = Pentium II Xeon. The
+            // 512KB Xeon cannot presently be distinguished, though...
             if (strstr(modelName, "Deschutes"))
             {
                 if (strstr(cacheSize, "32 "))
@@ -613,6 +615,13 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
                 {
                     char tmp[128];
                     snprintf(tmp, 128, "Intel Pentium II (Deschutes)", modelName);
+                    strncpy(modelName, tmp, 127);
+                    modelName[127] = '\0';
+                }
+                else if (strstr(cacheSize, "1024 ") || strstr(cacheSize, "2048 "))
+                {
+                    char tmp[128];
+                    snprintf(tmp, 128, "Intel Pentium II Xeon", modelName);
                     strncpy(modelName, tmp, 127);
                     modelName[127] = '\0';
                 }
