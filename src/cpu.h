@@ -45,6 +45,8 @@ typedef struct {
     char *vendor;
     // Model or architecture name (all)
     char *name;
+    // Family number (x86)
+    int family;
     // Model number (x86)
     int model;
     // Stepping number (x86)

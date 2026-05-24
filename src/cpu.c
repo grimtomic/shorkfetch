@@ -276,6 +276,7 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
 
     *result = (CPU_DATA) {
         .arch = UNKNOWN,
+        .family = -1,
         .model = -1,
         .stepping = -1,
         .freq = -1,
@@ -375,6 +376,19 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
                     free(extract);
                 }
             }
+            // x86: get family number
+            else if (result->family == -1 && strncmp(buffer, "cpu family", 10) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 4, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->family = atoi(extract);
+                    free(extract);
+                }
+            }
             // POWER: get CPU type
             else if (!result->name && strncmp(buffer, "cpu", 3) == 0)
             {
@@ -425,7 +439,7 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
             else if (result->stepping == -1 && strncmp(buffer, "stepping", 8) == 0)
             {
                 char *extract = extractFromPoint(buffer, 4, ':', 2);
-                if (extract)
+                if (extract && extract[0] != 'u')
                 {
                     if (result->arch == UNKNOWN)
                         result->arch = X86;
@@ -819,14 +833,14 @@ char *interpretCPU(CPU_DATA *cpu)
 
         // If we have a vendorless and revisionless 486, we can at least
         // infer if its purely 486SX, or a 486DX, 487SX (true 486SX +
-        // 487SX) or 486SX + 387 (eg, IBM 486BLx/486SLCx  + 387), from the
+        // 487SX) or 486SX + 387 (eg, IBM 486BLx/486SLCx + 387), via the
         // presence of an FPU
         if ((cpu->vendor[0] == '\0' || cpu->vendor[0] == 'u') && cpu->name[0] != '\0' && strcmp(cpu->name, "486") == 0)
         {
             if (cpu->hasFPU)
-                snprintf(cpu->name, NAME_LEN-1, "486DX/487SX/486SX + 387");
+                snprintf(cpu->name, NAME_LEN, "486DX/487SX/486SX + 387");
             else
-                snprintf(cpu->name, NAME_LEN-1, "486SX");
+                snprintf(cpu->name, NAME_LEN, "486SX");
         }
     }
 
