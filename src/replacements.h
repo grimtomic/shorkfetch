@@ -126,8 +126,6 @@ static const struct Replacement INTEL_REPLACES[] = {
     { " 486 DX",                " i486DX",              0 },
     { "486DX-50",               "486DX",                0 },
     { "486DX/2",                "486DX2",               0 },
-    { "OverDrive PODP5V63",     "Pentium OverDrive",    0 },
-    { "OverDrive PODP5V83",     "Pentium OverDrive",    0 },
     { "Pentium 60/66",          "Pentium (P5)",         0 },
     { "Pentium 75 - 200",       "Pentium (P54C)",       0 },
     { "Pentium 4 - M",          "Pentium 4-M",          0 },

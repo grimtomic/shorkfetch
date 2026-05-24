@@ -1,10 +1,10 @@
 processor	: 0
 vendor_id	: GenuineIntel
 cpu family	: 5
-model		: 2
-model name	: Pentium 75 - 200
-stepping	: 12
-cpu MHz		: 133.330
+model		: 1
+model name	: Pentium 60/66
+stepping	: 10
+cpu MHz		: 100.000
 fdiv_bug	: no
 f00f_bug	: yes
 coma_bug	: no
@@ -14,7 +14,7 @@ cpuid level	: 1
 wp		: yes
 flags		: fpu vme pse tsc msr mce cx8 cpuid
 bugs		: f00f itlb_multihit
-bogomips	: 266.66
+bogomips	: 200.00
 clflush size	: 32
 cache_alignment	: 32
 address sizes	: 32 bits physical, 32 bits virtual

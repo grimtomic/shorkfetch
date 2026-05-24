@@ -743,6 +743,34 @@ char *interpretCPU(CPU_DATA *cpu)
             cpu->name[NAME_LEN-1] = '\0';
         }
 
+        // The Pentium OverDrive for Socket 3 are guaranteed to be P54C, so
+        // let's report that to distinguish it from P5 OverDrives for Socket 4
+        if (strstr(cpu->name, "OverDrive PODP5V") && cpu->freq < 84)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
+        // Pentium OverDrives for Sockets 4 and 5 do not distinguish themselves
+        // by name from their base P5 or P54C Pentiums, but we can use
+        // OverDrive's 100+MHz clockspeeds to tell them apart
+        if (strstr(cpu->name, "60/66") && cpu->freq >= 100)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P5)", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+        else if (strstr(cpu->name, "75 - 200") && cpu->freq >= 100)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
         // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
         // and Celeron (Covington) have basically the same CPU ID, but we
         // can tell *some* apart from the cache size. For sure: 32KB =
