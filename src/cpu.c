@@ -743,14 +743,14 @@ char *interpretCPU(CPU_DATA *cpu)
                 if (cpu->model == 6)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "AMD K6 Model 6", cpu->name);
+                    snprintf(tmp, NAME_LEN, "AMD K6 Model 6");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
                 else if (cpu->model == 7)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "AMD K6 Model 7", cpu->name);
+                    snprintf(tmp, NAME_LEN, "AMD K6 Model 7");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
@@ -761,14 +761,14 @@ char *interpretCPU(CPU_DATA *cpu)
                     if (cpu->stepping == 0)
                     {
                         char tmp[NAME_LEN];
-                        snprintf(tmp, NAME_LEN, "AMD K6-III+", cpu->name);
+                        snprintf(tmp, NAME_LEN, "AMD K6-III+");
                         strncpy(cpu->name, tmp, NAME_LEN-1);
                         cpu->name[NAME_LEN-1] = '\0';
                     }
                     else if (cpu->stepping == 4)
                     {
                         char tmp[NAME_LEN];
-                        snprintf(tmp, NAME_LEN, "AMD K6-2+", cpu->name);
+                        snprintf(tmp, NAME_LEN, "AMD K6-2+");
                         strncpy(cpu->name, tmp, NAME_LEN-1);
                         cpu->name[NAME_LEN-1] = '\0';
                     }
@@ -782,14 +782,14 @@ char *interpretCPU(CPU_DATA *cpu)
                 if (cpu->model == 1 && cpu->freq >= 100)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P5)", cpu->name);
+                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P5)");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
                 else if (cpu->model == 2 && cpu->freq >= 100)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)", cpu->name);
+                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
@@ -798,7 +798,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 else if (cpu->model == 3 && cpu->freq < 84)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)", cpu->name);
+                    snprintf(tmp, NAME_LEN, "Intel Pentium OverDrive (P54C)");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
@@ -810,7 +810,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 if (cpu->model == 8 && cpu->stepping == 7)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "IDT WinChip 2A", cpu->name);
+                    snprintf(tmp, NAME_LEN, "IDT WinChip 2A");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
@@ -829,7 +829,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 if (cpu->cacheSize == 32)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "Intel Celeron (Covington)", cpu->name);
+                    snprintf(tmp, NAME_LEN, "Intel Celeron (Covington)");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
@@ -841,7 +841,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 else if (cpu->cacheSize >= 1024)
                 {
                     char tmp[NAME_LEN];
-                    snprintf(tmp, NAME_LEN, "Intel Pentium II Xeon", cpu->name);
+                    snprintf(tmp, NAME_LEN, "Intel Pentium II Xeon");
                     strncpy(cpu->name, tmp, NAME_LEN-1);
                     cpu->name[NAME_LEN-1] = '\0';
                 }
