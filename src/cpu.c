@@ -255,6 +255,23 @@ char *cleanCPUName(const char *input, size_t inputSize)
                 replaces++;
             }
         }
+
+        strLen = strlen(result);
+
+        // Remove potential bracketed data at the end. Start by finding first
+        // non-null character...
+        while (strLen > 0 && result[strLen - 1] == ' ') strLen--;
+        if (strLen > 0 && result[strLen - 1] == ')')
+        {
+            for (int i = strLen - 1; i >= 0; i--)
+            {
+                if (result[i] == '(')
+                {
+                    result[i] = '\0';
+                    break;
+                }
+            }
+        }
     }
 
     return result;
@@ -874,44 +891,47 @@ char *interpretCPU(CPU_DATA *cpu)
     // Compile our cores/threads substring
     char coresAndThreads[16] = "";
 
-    // If we don't have a cores value, set it to the same as threads
-    // so we don't try to show them both separately later
-    if (cpu->cores <= 0 && cpu->threads > 0)
-        cpu->cores = cpu->threads;
-
-    // If we don't have cores or threads, we use the processor index count in
-    // its place
-    if (cpu->cores <= 0 && cpu->threads <= 0 && cpu->index > 0)
+    if (!COMPACT)
     {
-        // We don't have a good way to tell cores from threads for POWER
-        // CPUs at the moment, so let's not imply our value is for cores
-        if (cpu->arch == POWER)
-            snprintf(coresAndThreads, 16, "%dT", cpu->index);
-        else
-            snprintf(coresAndThreads, 16, "%dC", cpu->index);
-    }
-    // If cores and threads are the same value, just show cores
-    else if (cpu->cores > 0 && cpu->cores == cpu->threads)
-        snprintf(coresAndThreads, 16, "%dC", cpu->cores);
-    // If cores and threads are different values, show both
-    else if (cpu->cores > 0 && cpu->threads > 0)
-        snprintf(coresAndThreads, 16, "%dC/%dT", cpu->cores, cpu->threads);
+        // If we don't have a cores value, set it to the same as threads
+        // so we don't try to show them both separately later
+        if (cpu->cores <= 0 && cpu->threads > 0)
+            cpu->cores = cpu->threads;
 
-    // If successful, add the substring to the result string
-    if (coresAndThreads[0] != '\0')
-    {
-        // If our result string has vendor and/or name, we add our cores/
-        // threads substring on the end
-        if (result[0] != '\0')
+        // If we don't have cores or threads, we use the processor index count in
+        // its place
+        if (cpu->cores <= 0 && cpu->threads <= 0 && cpu->index > 0)
         {
-            char *tmp = malloc(RESULT_LEN);
-            snprintf(tmp, RESULT_LEN, "%s (%s)", result, coresAndThreads);
-            strncpy(result, tmp, RESULT_LEN-1);
-            free(tmp);
+            // We don't have a good way to tell cores from threads for POWER
+            // CPUs at the moment, so let's not imply our value is for cores
+            if (cpu->arch == POWER)
+                snprintf(coresAndThreads, 16, "%dT", cpu->index);
+            else
+                snprintf(coresAndThreads, 16, "%dC", cpu->index);
         }
-        // If our result is blank, we make it our cores/threads substring
-        else
-            strncpy(result, coresAndThreads, RESULT_LEN-1);
+        // If cores and threads are the same value, just show cores
+        else if (cpu->cores > 0 && cpu->cores == cpu->threads)
+            snprintf(coresAndThreads, 16, "%dC", cpu->cores);
+        // If cores and threads are different values, show both
+        else if (cpu->cores > 0 && cpu->threads > 0)
+            snprintf(coresAndThreads, 16, "%dC/%dT", cpu->cores, cpu->threads);
+
+        // If successful, add the substring to the result string
+        if (coresAndThreads[0] != '\0')
+        {
+            // If our result string has vendor and/or name, we add our cores/
+            // threads substring on the end
+            if (result[0] != '\0')
+            {
+                char *tmp = malloc(RESULT_LEN);
+                snprintf(tmp, RESULT_LEN, "%s (%s)", result, coresAndThreads);
+                strncpy(result, tmp, RESULT_LEN-1);
+                free(tmp);
+            }
+            // If our result is blank, we make it our cores/threads substring
+            else
+                strncpy(result, coresAndThreads, RESULT_LEN-1);
+        }
     }
 
     // If the processor count is higher than the thread count, it's likely
