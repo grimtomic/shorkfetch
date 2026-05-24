@@ -774,10 +774,13 @@ int main(int argc, char *argv[])
     free(shell);
 
     free(gpuFromCPU);
-    free(cpu->uarch);
-    free(cpu->vendor);
-    free(cpu->name);
-    free(cpu);
+    if (cpu) 
+    {
+        free(cpu->uarch);
+        free(cpu->vendor);
+        free(cpu->name);
+        free(cpu);
+    }
     if (gpus) free(gpus);
     free(root);
 
