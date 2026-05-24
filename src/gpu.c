@@ -89,7 +89,7 @@ char *cleanGPUName(const char *vendor, const char *device, const size_t inputSiz
 
     // Vendor-specific actions...
     // Advanced Micro Devices, Inc. [AMD/ATI]
-    if (vendor[0] == 'A' && strncmp(vendor, "Advanced Micro", 14) == 0)
+    if (vendor[0] == 'A' && (strncmp(vendor, "AMD", 3) == 0 || strncmp(vendor, "Advanced Micro", 14) == 0))
     {
         // If we used amdgpu.ids, A deterimed "AMD" or "ATI" may be in the
         // device name and we should use that
