@@ -14,7 +14,7 @@
 
 
 
-static const char *VERSION = "0.2.1-wip";
+static const char *VERSION = "0.3-wip";
 
 
 
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
     char *shell = showSh ? getShell() : NULL;
 
     char *gpuFromCPU = NULL;
-    char *cpu = showCPU ? getCPU("/proc/cpuinfo", &gpuFromCPU) : NULL;
+    CPU_DATA *cpu = showCPU ? getCPU("/proc/cpuinfo", &gpuFromCPU) : NULL;
     int noGPUs = 0;
     GPU_IDS *gpus = showGPU ? getGPUs(&noGPUs) : NULL;
     char *ram = showRAM ? getRAM(mi) : NULL;
@@ -600,17 +600,24 @@ int main(int argc, char *argv[])
         putchar('\n');
     }
 
-    if (cpu && cpu[0] != '\0')
+    if (cpu)
     {
-        if (showShork) printf("%s%s%s", colAccent, SHORK[shorkLine++], colReset);
-        if (!useBullets)
+        char *cpuStr = interpretCPU(cpu);
+
+        if (cpuStr && cpuStr[0] != '\0')
         {
-            if (!COMPACT)
-                printf("%sCPU:%s      %s\n", colAccent, colReset, cpu);
-            else
-                printf("%sCPU:%s %s\n", colAccent, colReset, cpu);
+            if (showShork) printf("%s%s%s", colAccent, SHORK[shorkLine++], colReset);
+            if (!useBullets)
+            {
+                if (!COMPACT)
+                    printf("%sCPU:%s      %s\n", colAccent, colReset, cpuStr);
+                else
+                    printf("%sCPU:%s %s\n", colAccent, colReset, cpuStr);
+            }
+            else printf(" %s%c%s %s\n", colAccent, bullet, colReset, cpuStr);
         }
-        else printf(" %s%c%s %s\n", colAccent, bullet, colReset, cpu);
+
+        free(cpuStr);
     }
 
     if (gpus && noGPUs > 0)
@@ -618,9 +625,9 @@ int main(int argc, char *argv[])
         int pastFirstGPU = 0;
         for (int i = 0; i < noGPUs; i++)
         {
-            char *gpu = interpretGPU(&gpus[i]);
+            char *gpuStr = interpretGPU(&gpus[i]);
 
-            if (gpu && gpu[0] != '\0')
+            if (gpuStr && gpuStr[0] != '\0')
             {
                 if (showShork) printf("%s%s%s", colAccent, SHORK[shorkLine++], colReset);
                 if (!useBullets)
@@ -628,24 +635,24 @@ int main(int argc, char *argv[])
                     if (!COMPACT)
                     {
                         if (noGPUs == 1)
-                            printf("%sGPU:%s      %s\n", colAccent, colReset, gpu);
+                            printf("%sGPU:%s      %s\n", colAccent, colReset, gpuStr);
                         else if (!pastFirstGPU)
-                            printf("%sGPUs:%s     %s\n", colAccent, colReset, gpu);
+                            printf("%sGPUs:%s     %s\n", colAccent, colReset, gpuStr);
                         else
-                            printf("          %s\n", gpu);
+                            printf("          %s\n", gpuStr);
                     }
                     else
                     {
                         if (noGPUs == 1 || !pastFirstGPU)
-                            printf("%sGPU:%s %s\n", colAccent, colReset, gpu);
+                            printf("%sGPU:%s %s\n", colAccent, colReset, gpuStr);
                         else
-                            printf("     %s\n", gpu);
+                            printf("     %s\n", gpuStr);
                     }
                 }
-                else printf(" %s%c%s %s\n", colAccent, bullet, colReset, gpu);
+                else printf(" %s%c%s %s\n", colAccent, bullet, colReset, gpuStr);
             }
 
-            free(gpu);
+            free(gpuStr);
             pastFirstGPU = 1;
         }
     }
@@ -767,6 +774,9 @@ int main(int argc, char *argv[])
     free(shell);
 
     free(gpuFromCPU);
+    free(cpu->uarch);
+    free(cpu->vendor);
+    free(cpu->name);
     free(cpu);
     if (gpus) free(gpus);
     free(root);

@@ -19,14 +19,49 @@
 
 
 
+#define UARCH_LEN           128
+#define VENDOR_LEN          16
+#define NAME_LEN            128
+
+
+
 typedef enum
 {
-    UNKNOWN,
+    UNKNOWN = 0,
     ARM,
     POWER,
     RISCV,
     X86
-} CPUArch;
+} CPU_ARCH;
+
+
+
+typedef struct {
+    // Major architecture (all)
+    CPU_ARCH arch;
+    // Micro architecture (RISC-V)
+    char *uarch;
+    // Vendor name (ARM, x86)
+    char *vendor;
+    // Model or architecture name (all)
+    char *name;
+    // Model number (x86)
+    int model;
+    // Stepping number (x86)
+    int stepping;
+    // Clock frequency in MHz (POWER, some RISC-V, x86)
+    float freq;
+    // Processor index count (ARM, POWER, some RISC-V, x86)
+    int index;
+    // Physical core count (x86)
+    int cores;
+    // Logical thread count (RISC-V, x86)
+    int threads;
+    // Cache size in KB (x86)
+    int cacheSize;
+    // Floating-point unit present (0=n;1=y) (x86)
+    int hasFPU;
+} CPU_DATA;
 
 
 
@@ -53,6 +88,7 @@ static const char *ARM_IMPLEMENTERS[193] = {
 
 
 char *cleanCPUName(const char *, size_t, int);
-char *getCPU(char *, char **);
+CPU_DATA *getCPU(char *, char **);
+char *interpretCPU(CPU_DATA*);
 
 #endif

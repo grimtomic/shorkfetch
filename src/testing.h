@@ -39,6 +39,7 @@ void testGetCPU(void)
 
     char *cpuinfos[100];
     int count = 0;
+    int showRaw = 0;
 
     struct dirent *dirEntry;
     while ((dirEntry = readdir(testingDir)) != NULL)
@@ -63,13 +64,33 @@ void testGetCPU(void)
         if (dot) *dot = '\0';
 
         char *gpuFromCPU = NULL;
-        char *cpu = getCPU(cpuinfo, &gpuFromCPU);
+        CPU_DATA *cpu = getCPU(cpuinfo, &gpuFromCPU);
+        char *cpuStr = interpretCPU(cpu);
 
         if (gpuFromCPU)
-            printf("\033[31m%s:\033[0m \033[32m%s\033[0m \033[36m(%s)\033[0m\n", bName, cpu, gpuFromCPU);
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m \033[36m(%s)\033[0m\n", bName, cpuStr, gpuFromCPU);
         else
-            printf("\033[31m%s:\033[0m \033[32m%s\033[0m\n", bName, cpu);
+            printf("\033[31m%s:\033[0m \033[32m%s\033[0m\n", bName, cpuStr);
 
+        if (showRaw)
+        {
+            printf("    arch:      %d\n", cpu->arch);
+            printf("    uarch:     %s\n", cpu->uarch ? cpu->uarch : "(null)");
+            printf("    vendor:    %s\n", cpu->vendor ? cpu->vendor : "(null)");
+            printf("    name:      %s\n", cpu->name   ? cpu->name   : "(null)");
+            printf("    model:     %d\n", cpu->model);
+            printf("    stepping:  %d\n", cpu->stepping);
+            printf("    freq:      %.0f\n", cpu->freq);
+            printf("    index:     %d\n", cpu->index);
+            printf("    cores:     %d\n", cpu->cores);
+            printf("    threads:   %d\n", cpu->threads);
+            printf("    cacheSize: %d\n", cpu->cacheSize);
+            printf("    hasFPU:    %d\n", cpu->hasFPU);
+        }
+
+        free(cpu->uarch);
+        free(cpu->vendor);
+        free(cpu->name);
         free(cpu);
         free(gpuFromCPU);
     }

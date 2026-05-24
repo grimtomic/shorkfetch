@@ -26,7 +26,8 @@
  * Cleans a CPU's name so it is less needlessly verbose and 'to the point'.
  * @param input Input string
  * @param inputSize Size to use when allocating the result string
- * @param coreCount Number of cores the processor has (presently only used for CPU name manipulation)
+ * @param coreCount Number of cores the processor has (presently only used for
+ *                  CPU name manipulation)
  * @return String containing the result after cleaning
  */
 char *cleanCPUName(const char *input, size_t inputSize, int coreCount)
@@ -279,529 +280,337 @@ char *cleanCPUName(const char *input, size_t inputSize, int coreCount)
 }
 
 /**
+ * Extracts CPU data from the given cpuinfo file and packs it into a CPU_DATA
+ * struct for future processing and interpretation.
  * @param cpuInfo A file path to a cpuinfo file to read
  * @param gpuFromCPU A pointer to a string for returning an extracted GPU name
- * @return String containing the CPU's name and core/thread specs; empty string
- *         if unknown
+ * @return A CPU_DATA struct containing CPU data; NULL if no info found/error
  */
-char *getCPU(char *cpuInfo, char **gpuFromCPU)
+CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
 {
-    CPUArch arch;
+    if (!cpuInfo) return NULL;
 
-    char *result = malloc(134);
-    char *cpu = malloc(128);
-    char *vendor = malloc(16);
-    char *implementer = malloc(16);
-    char *isa = malloc(128);
-    char *model = malloc(4);
-    char *modelName = malloc(128);
-    char *stepping = malloc(4);
-    char *cacheSize = malloc(16);
-    char *architecture = malloc(4);
-    char *processor = malloc(5);
-    char *cores = malloc(5);
-    char *threads = malloc(5);
-    char *hart = malloc(5);
-    char *fpu = malloc(4);
-    if (!result || !cpu || !vendor || !implementer || !isa || !model || !modelName || !stepping || !cacheSize || !architecture || !processor || !cores || !threads || !hart || !fpu) 
-    {
-        free(result);
-        free(cpu);
-        free(vendor);
-        free(implementer);
-        free(isa);
-        free(model);
-        free(modelName);
-        free(stepping);
-        free(cacheSize);
-        free(architecture);
-        free(processor);
-        free(cores);
-        free(threads);
-        free(hart);
-        free(fpu);
-        return NULL;
-    }
-    result[0] = cpu[0] = vendor[0] = implementer[0] = isa[0] = model[0] = modelName[0] = stepping[0] = cacheSize[0] = architecture[0] = processor[0] = cores[0] = threads[0] = hart[0] = fpu[0] = '\0';
+    CPU_DATA *result = malloc(sizeof(CPU_DATA));
+    if (!result) return NULL;
+
+    *result = (CPU_DATA) {
+        .arch = UNKNOWN,
+        .model = -1,
+        .stepping = -1,
+        .freq = -1,
+        .index = 0,
+        .cores = -1,
+        .threads = -1,
+        .cacheSize = -1,
+        .hasFPU = -1
+    };
 
 
 
     FILE *fStream = fopen(cpuInfo, "r");
     if (fStream)
     {
-
         char buffer[256];
         while (fgets(buffer, sizeof(buffer), fStream))
         {
-            if (strncmp(buffer, "processor", 9) == 0)
+            // RISC-V: get micro architecture (uarch)
+            if (!result->uarch && strncmp(buffer, "uarch", 5) == 0)
+            {
+                char *extract = extractFromPoint(buffer, UARCH_LEN, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = RISCV;
+
+                    result->uarch = malloc(UARCH_LEN);
+                    strncpy(result->uarch, extract, UARCH_LEN - 1);
+                    result->uarch[UARCH_LEN - 1] = '\0';
+                    free(extract);
+                }
+            }
+            // x86: get vendor ID
+            else if (!result->vendor && strncmp(buffer, "vendor_id", 9) == 0)
+            {
+                char *extract = extractFromPoint(buffer, VENDOR_LEN, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->vendor = malloc(VENDOR_LEN);
+                    strncpy(result->vendor, extract, VENDOR_LEN - 1);
+                    result->vendor[VENDOR_LEN - 1] = '\0';
+                    free(extract);
+                }
+            }
+            // ARM: get CPU implementer name
+            else if (!result->vendor && strncmp(buffer, "CPU implementer", 15) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 16, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = ARM;
+
+                    // Try to resolve the implementer name from the received
+                    // hex value
+                    char *end = NULL;
+                    long val = strtol(extract, &end, 0);
+                    if (end != extract && val >= 0 && val <= 193 && ARM_IMPLEMENTERS[val])
+                    {
+                        result->vendor = malloc(VENDOR_LEN);
+                        strncpy(result->vendor, ARM_IMPLEMENTERS[val], VENDOR_LEN - 1);
+                        result->vendor[VENDOR_LEN - 1] = '\0';
+                        free(extract);
+                    }
+                }
+            }
+            // x86: get model name
+            else if (!result->name && strncmp(buffer, "model name", 10) == 0)
+            {
+                char *extract = extractFromPoint(buffer, NAME_LEN, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->name = malloc(NAME_LEN);
+                    strncpy(result->name, extract, NAME_LEN - 1);
+                    result->name[NAME_LEN - 1] = '\0';
+                    free(extract);
+                }
+            }
+            // ARM: get CPU architecture
+            else if (!result->name && strncmp(buffer, "CPU architecture", 16) == 0)
+            {
+                char *extract = extractFromPoint(buffer, NAME_LEN, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = ARM;
+
+                    result->name = malloc(NAME_LEN);
+                    snprintf(result->name, NAME_LEN, "Armv%s", extract);
+                    free(extract);
+                }
+            }
+            // POWER: get CPU type
+            else if (!result->name && strncmp(buffer, "cpu", 3) == 0)
+            {
+                char *extract = extractFromPoint(buffer, NAME_LEN, ':', 2);
+                if (extract && extract[0] == 'P' && extract[4] == 'R')
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = POWER;
+
+                    result->name = malloc(NAME_LEN);
+                    strncpy(result->name, extract, NAME_LEN - 1);
+                    free(extract);
+
+                    // In cases like "POWER9, altivec supported", we want to
+                    // remove the comma and everything after
+                    char *comma = strchr(result->name, ',');
+                    if (comma) *comma = '\0';
+                }
+            }
+            // RISC-V: get instruction set architecture (ISA)
+            else if (!result->name && strncmp(buffer, "isa", 3) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 128, ':', 2);
+                if (extract && extract[0] == 'r' && extract[1] == 'v')
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = RISCV;
+
+                    result->name = malloc(NAME_LEN);
+                    strncpy(result->name, "RISC-V", NAME_LEN - 1);
+                    result->name[NAME_LEN - 1] = '\0';
+                }
+            }
+            // x86: get model number
+            else if (result->model == -1 && strncmp(buffer, "model", 5) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 4, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->model = atoi(extract);
+                    free(extract);
+                }
+            }
+            // x86: get stepping number
+            else if (result->stepping == -1 && strncmp(buffer, "stepping", 8) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 4, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->stepping = atoi(extract);
+                    free(extract);
+                }
+            }
+            // x86: get clock frequency in MHz
+            else if (result->freq < 0 && strncmp(buffer, "cpu MHz", 7) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 16, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->freq = atof(extract);
+                    free(extract);
+                }
+            }
+            // POWER: get clock speed in MHz
+            else if (result->freq < 0 && strncmp(buffer, "clock", 5) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 16, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = POWER;
+
+                    result->freq = atof(extract);
+                    free(extract);
+                }
+            }
+            // RISC-V: get clock speed in MHz
+            else if (result->freq < 0 && strncmp(buffer, "cpu-freq", 8) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 16, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = RISCV;
+
+                    // RISC-V CPU frequencies are in GHz but the rest of the
+                    // code will expect MHz, so let's convert
+                    result->freq = atof(extract) * 1000;
+                    free(extract);
+                }
+            }
+            // All: get processor index count (must repeat to get the final
+            // value)
+            else if (strncmp(buffer, "processor", 9) == 0)
             {
                 char *extract = extractFromPoint(buffer, 5, ':', 2);
                 if (extract)
                 {
-                    strncpy(processor, extract, 4);
-                    processor[4] = '\0';
+                    result->index = (atoi(extract) + 1);
                     free(extract);
                 }
             }
+            // x86: get physical core count
+            else if (result->cores == -1 && strncmp(buffer, "cpu cores", 9) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->cores = atoi(extract);
+                    free(extract);
+                }
+            }
+            // x86: get logical thread count
+            else if (result->threads == -1 && strncmp(buffer, "siblings", 8) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->threads = atoi(extract);
+                    free(extract);
+                }
+            }
+            // RISC-V: get hardware thread (hart) count
             else if (strncmp(buffer, "hart", 4) == 0)
             {
                 char *extract = extractFromPoint(buffer, 5, ':', 2);
                 if (extract)
                 {
-                    strncpy(hart, extract, 4);
-                    hart[4] = '\0';
+                    if (result->arch == UNKNOWN)
+                        result->arch = RISCV;
+
+                    result->threads = atoi(extract) + 1;
                     free(extract);
+
+                    // Whilst typically the exception and not the rule, some
+                    // CPUs like SiFive Freedom U540 start from 1 instead of 0.
+                    // If the hart count is more than 1 and is odd, we'll 
+                    // decrement it.
+                    if (result->threads > 1 && result->threads % 2 != 0)
+                        result->threads--;
                 }
             }
-            else if (implementer[0] == '\0' && strncmp(buffer, "CPU implementer", 15) == 0)
+            // x86: get cache size in KB
+            else if (result->cacheSize == -1 && strncmp(buffer, "cache size", 10) == 0)
             {
                 char *extract = extractFromPoint(buffer, 16, ':', 2);
                 if (extract)
                 {
-                    strncpy(implementer, extract, 15);
-                    implementer[15] = '\0';
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    result->cacheSize = atoi(extract);
                     free(extract);
                 }
             }
-            else if (isa[0] == '\0' && strncmp(buffer, "isa", 3) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 128, ':', 2);
-                if (extract)
-                {
-                    strncpy(isa, extract, 127);
-                    isa[127] = '\0';
-                    free(extract);
-                }
-            }
-            else if (vendor[0] == '\0' && strncmp(buffer, "vendor_id", 9) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 16, ':', 2);
-                if (extract)
-                {
-                    strncpy(vendor, extract, 15);
-                    vendor[15] = '\0';
-                    free(extract);
-                }
-            }
-            else if (modelName[0] == '\0' && strncmp(buffer, "model name", 10) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 128, ':', 2);
-                if (extract)
-                {
-                    strncpy(modelName, extract, 127);
-                    modelName[127] = '\0';
-                    free(extract);
-                }
-            }
-            else if (model[0] == '\0' && strncmp(buffer, "model", 5) == 0)
+            // x86: get whether an FPU is present
+            else if (result->hasFPU == -1 && strncmp(buffer, "fpu", 3) == 0)
             {
                 char *extract = extractFromPoint(buffer, 4, ':', 2);
                 if (extract)
                 {
-                    strncpy(model, extract, 3);
-                    model[3] = '\0';
-                    free(extract);
-                }
-            }
-            else if (stepping[0] == '\0' && strncmp(buffer, "stepping", 8) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                if (extract)
-                {
-                    strncpy(stepping, extract, 3);
-                    stepping[3] = '\0';
-                    free(extract);
-                }
-            }
-            else if (cacheSize[0] == '\0' && strncmp(buffer, "cache size", 10) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 16, ':', 2);
-                if (extract)
-                {
-                    strncpy(cacheSize, extract, 15);
-                    cacheSize[15] = '\0';
-                    free(extract);
-                }
-            }
-            else if (architecture[0] == '\0' && strncmp(buffer, "CPU architecture", 16) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                if (extract)
-                {
-                    strncpy(architecture, extract, 3);
-                    architecture[3] = '\0';
-                    free(extract);
-                }
-            }
-            else if (cores[0] == '\0' && strncmp(buffer, "cpu cores", 9) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 5, ':', 2);
-                if (extract)
-                {
-                    strncpy(cores, extract, 4);
-                    cores[4] = '\0';
-                    free(extract);
-                }
-            }
-            else if (cpu[0] == '\0' && strncmp(buffer, "cpu", 3) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 128, ':', 2);
-                if (extract)
-                {
-                    strncpy(cpu, extract, 127);
-                    cpu[127] = '\0';
-                    free(extract);
-                }
-            }
-            else if (threads[0] == '\0' && strncmp(buffer, "siblings", 8) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 5, ':', 2);
-                if (extract)
-                {
-                    strncpy(threads, extract, 4);
-                    threads[4] = '\0';
-                    free(extract);
-                }
-            }
-            else if (fpu[0] == '\0' && strncmp(buffer, "fpu", 3) == 0)
-            {
-                char *extract = extractFromPoint(buffer, 4, ':', 2);
-                if (extract)
-                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
                     if (strncmp(extract, "yes", 3) == 0)
-                        strncpy(fpu, "1", 2);
+                        result->hasFPU = 1;
                     else if (strncmp(extract, "no", 2) == 0)
-                        strncpy(fpu, "0", 2);
+                        result->hasFPU = 0;
                     free(extract);
                 }
             }
         }
         fclose(fStream);
+    }
+    else 
+    {
+        free(result->uarch);
+        free(result->vendor);
+        free(result->name);
+        free(result);
+        return NULL;
+    }
 
 
 
-        // Typical x86 path
-        if (vendor[0] != '\0' || modelName[0] != '\0')
-        {
-            arch = X86;
-
-            // Check if model name lacks the vendor name and if we need to try adding it in manually
-            if ((vendor[0] != '\0' && vendor[0] != 'u') && (modelName[0] != '\0' && modelName[0] != 'u'))
-            {
-                if (!strstr(modelName, "Intel") && !strstr(modelName, "AMD") && !strstr(modelName, "Cyrix") && !strstr(modelName, "IDT") && !strstr(modelName, "VIA") && !strstr(modelName, "Transmeta"))
-                {
-                    char *tmp = malloc(128);
-                    if (tmp)
-                    {
-                        if (strstr(vendor, "Intel") || strstr(vendor, "Iotel"))
-                            snprintf(tmp, 128, "%s %s", "Intel", modelName);
-                        else if (strstr(vendor, "AMD"))
-                            snprintf(tmp, 128, "%s %s", "AMD", modelName);
-                        else if (strstr(vendor, "Cyrix"))
-                            snprintf(tmp, 128, "%s %s", "Cyrix", modelName);
-                        else if (strstr(vendor, "Centaur"))
-                            snprintf(tmp, 128, "%s %s", "IDT/Centaur", modelName);
-                        else if (strstr(vendor, "VIA"))
-                            snprintf(tmp, 128, "%s %s", "VIA", modelName);
-                        else if (strstr(vendor, "Transmeta") || strstr(vendor, "TM"))
-                            snprintf(tmp, 128, "%s %s", "Transmeta", modelName);
-                        else
-                            snprintf(tmp, 128, "%s %s", vendor, modelName);
-                        
-                        strncpy(modelName, tmp, 128);
-                        free(tmp);
-                        modelName[127] = '\0';
-                    }
-                }
-            }
-
-
-
-            // If we have a K6, we will try to distinguish if it's a Model 6 or
-            // Model 7
-            if (strstr(modelName, "AMD-K6tm w"))
-            {
-                if (model[0] == '6')
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "AMD K6 Model 6", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-                else if (model[0] == '7')
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "AMD K6 Model 7", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-            }
-
-            // If we have a supposed K6-III, it may actually be a K6-2+ or
-            // K6-III+, and we may be able to tell from the stepping
-            if (strstr(modelName, "AMD-K6(tm)-III P"))
-            {
-                if (stepping[0] == '0')
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "AMD K6-III+", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-                else if (stepping[0] == '4')
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "AMD K6-2+", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-            }
-
-            // If we have a Cx486Dxxx with FPU, make sure 387 is included in
-            // the model name
-            if ((strstr(modelName, "Cx486DLC") || strstr(modelName, "Cx486DRx2")) && fpu[0] == '1')
-            {
-                char tmp[128];
-                snprintf(tmp, 128, "%s + 387", modelName);
-                strncpy(modelName, tmp, 127);
-                modelName[127] = '\0';
-            }
-
-            // If we have a Cx486S with FPU, make sure 487 is included in the
-            // model name
-            if (strstr(modelName, "Cx486S") && fpu[0] == '1')
-            {
-                char tmp[128];
-                snprintf(tmp, 128, "%s + 487", modelName);
-                strncpy(modelName, tmp, 127);
-                modelName[127] = '\0';
-            }
-
-            // If we have a supposed WinChip 2-3D, we may be able to tell if
-            // its a WinChip 2A from the stepping
-            if (strstr(modelName, "WinChip 2-3D") && stepping[0] == '7')
-            {
-                char tmp[128];
-                snprintf(tmp, 128, "IDT WinChip 2A", modelName);
-                strncpy(modelName, tmp, 127);
-                modelName[127] = '\0';
-            }
-
-            // If we have for certain an Intel 486SX with FPU, make sure 487 is
-            // included in the model name
-            if (strstr(modelName, "486") && strstr(modelName, "SX") && fpu[0] == '1')
-            {
-                char tmp[128];
-                snprintf(tmp, 128, "%s + 487", modelName);
-                strncpy(modelName, tmp, 127);
-                modelName[127] = '\0';
-            }
-
-            // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
-            // and Celeron (Covington) have basically the same CPU ID, but we
-            // can tell *some* apart from the cache size. For sure: 32KB =
-            // Celeron; 512KB = Pentium II; 1024/2048KB = Pentium II Xeon. The
-            // 512KB Xeon cannot presently be distinguished, though...
-            if (strstr(modelName, "Deschutes"))
-            {
-                if (strstr(cacheSize, "32 "))
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "Intel Celeron (Covington)", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-                else if (strstr(cacheSize, "512 "))
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "Intel Pentium II (Deschutes)", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-                else if (strstr(cacheSize, "1024 ") || strstr(cacheSize, "2048 "))
-                {
-                    char tmp[128];
-                    snprintf(tmp, 128, "Intel Pentium II Xeon", modelName);
-                    strncpy(modelName, tmp, 127);
-                    modelName[127] = '\0';
-                }
-            }
-
-            // If we have a vendorless and revisionless 486, we can at least
-            // infer if its purely 486SX, or a 486DX, 487SX (true 486SX +
-            // 487SX) or 486SX + 387 (eg, IBM 486BLx/486SLCx  + 387), from the
-            // presence of an FPU
-            if ((vendor[0] == '\0' || vendor[0] == 'u') && modelName[0] != '\0' && strcmp(modelName, "486") == 0)
-            {
-                if (fpu[0] == '0')
-                    snprintf(modelName, 127, "486SX");
-                else if (fpu[0] == '1')
-                    snprintf(modelName, 127, "486DX/487SX/486SX + 387");
-            }
-        }
-        // Possible ARM CPU path
-        else if (architecture[0] != '\0')
-        {
-            arch = ARM;
-
-            const char *implementerName = NULL;
-            // Try to resolve implementer name 
-            if (implementer[0] != '\0')
-            {
-                char *end = NULL;
-                long val = strtol(implementer, &end, 0);
-                if (end != implementer && val >= 0 && val <= 193 && ARM_IMPLEMENTERS[val])
-                    implementerName = ARM_IMPLEMENTERS[val];
-            }
-
-            if (implementerName)
-                snprintf(modelName, 128, "%s Armv%d", implementerName, atoi(architecture));
-            else
-                snprintf(modelName, 128, "Armv%d", atoi(architecture));
-        }
-        // Possible POWER CPU path
-        else if (cpu[0] == 'P' && modelName[0] == '\0')
-        {
-            arch = POWER;
-
-            strncpy(modelName, cpu, 127);
-            modelName[127] = '\0';
-
-            // In cases like "POWER9, altivec supported", we want to remove the
-            // comma and everything after
-            char *comma = strchr(modelName, ',');
-            if (comma) *comma = '\0';
-        }
-        // RISC-V CPU path
-        else if (isa[0] == 'r' && isa[1] == 'v')
-        {
-            arch = RISCV;
-            snprintf(modelName, 128, "RISC-V");
-        }
-        // Leave if have nothing to show...
-        else if (cores[0] == '\0' && threads[0] == '\0' && processor[0] == '\0')
-        {
-            free(result);
-            free(cpu);
-            free(vendor);
-            free(implementer);
-            free(isa);
-            free(model);
-            free(modelName);
-            free(stepping);
-            free(cacheSize);
-            free(architecture);
-            free(processor);
-            free(cores);
-            free(threads);
-            free(hart);
-            free(fpu);
-            return NULL;
-        }
-
-
-
-        // Parse the possible cores and threads counts to integers
-        int processorInt = 0;
-        if (processor[0] != '\0')
-        {
-            processorInt = atoi(processor);
-            // Processor count starts at 0, so +1...
-            processorInt++;
-        }
-
-        int coresInt = 0;
-        if (cores[0] != '\0')
-            coresInt = atoi(cores);
-
-        int threadsInt = 0;
-        if (threads[0] != '\0')
-            threadsInt = atoi(threads);
-
-        int hartInt = 0;
-        if (hart[0] != '\0')
-        {
-            hartInt = atoi(hart);
-            // The SiFive Freedom U540 (etc.) count from 1 instead of 0...
-            if (hartInt % 2 != 0)
-                hartInt++;
-        }
-
-
-
-        char coresAndThreads[16] = "";
-
-        // For most arches, we work with cores, threads and fallback processor
-        // count
-        if (arch != RISCV)
-        {
-            // If we don't have a cores value, set it to the same as threads
-            // so we don't try to show them separately later
-            if (cores[0] == '\0' && threads[0] != '\0')
-                strncpy(cores, threads, 3);
-
-            // If we don't have cores or threads, we use the processor field in its
-            // place
-            if (coresInt == 0 && threadsInt == 0 && processorInt > 0)
-            {
-                // We don't have a good way to tell cores from threads for POWER
-                // CPUs at the moment, so let's not imply our value is for cores
-                if (arch == POWER)
-                    snprintf(coresAndThreads, 16, "%dT", processorInt);
-                else
-                    snprintf(coresAndThreads, 16, "%dC", processorInt);
-            }
-            // If cores and threads are the same value, just show cores
-            else if (coresInt == threadsInt)
-                snprintf(coresAndThreads, 16, "%dC", coresInt);
-            // If cores and threads are different values, show both
-            else
-                snprintf(coresAndThreads, 16, "%dC/%dT", coresInt, threadsInt);
-        }
-        // For RISC-V specifically, we have processor and hart (hardware
-        // thread) to work with
-        else
-        {
-            // If we have processor...
-            if (processorInt > 0)
-            {
-                // ...and hart
-                if (hartInt > 0)
-                {
-                    // If processors and hart are the same value, just show
-                    // processors
-                    if (processorInt == hartInt || hartInt == 0)
-                        snprintf(coresAndThreads, 16, "%dC", processorInt);
-                    // If processors and hart are different values, show both
-                    else
-                        snprintf(coresAndThreads, 16, "%dC/%dT", processorInt, hartInt);
-                }
-                // ...only
-                else
-                    snprintf(coresAndThreads, 16, "%dC", processorInt);
-            }
-            // If we only have hart...
-            else if (hartInt > 0)
-                snprintf(coresAndThreads, 16, "%dC", hartInt);
-        }
-
-
-
+    if (result->arch == X86)
+    {
         // If the model name has GPU name in it, we will extract it and save if
         // for later in case we need it as a fallback when GPU detection fails
         // or produces no results
         const char *gpuNeedles[] = { "with Radeon", "w/ Radeon", "with GeForce", "w/ GeForce" };
         for (int i = 0; i < 4; i++)
         {
-            char *found = strstr(modelName, gpuNeedles[i]);
+            char *found = strstr(result->name, gpuNeedles[i]);
             if (found)
             {
                 // Save it for later
-                *gpuFromCPU = malloc(134);
+                *gpuFromCPU = malloc(NAME_LEN);
                 if (*gpuFromCPU)
                 {
                     const char *gpuVendor = (i < 2) ? "AMD " : "NVIDIA ";
-                    snprintf(*gpuFromCPU, 134, "%s%s", gpuVendor, found + (strchr(gpuNeedles[i], ' ') - gpuNeedles[i]) + 1);
+                    snprintf(*gpuFromCPU, NAME_LEN, "%s%s", gpuVendor, found + (strchr(gpuNeedles[i], ' ') - gpuNeedles[i]) + 1);
                 }
 
                 // Remove it from model name
@@ -809,83 +618,269 @@ char *getCPU(char *cpuInfo, char **gpuFromCPU)
 
                 // Make sure there isn't any trailing nonsense left
                 char *end = found - 1;
-                while (end > modelName && (*end == ' ' || *end == ',' || *end == '-'))
+                while (end > result->name && (*end == ' ' || *end == ',' || *end == '-'))
                     *end-- = '\0';
             }
         }
-
-
-
-        // If we have no model name but we have core/thread count, just show
-        // the latter
-        if (modelName[0] == '\0' && coresAndThreads[0] != '\0')
-            strncpy(result, coresAndThreads, 133);
-        // If we're in compact mode, we just show the model name
-        else if (COMPACT)
-            strncpy(result, modelName, 133);
-        // Normal view
-        else
-        {
-            if (coresAndThreads[0] != '\0')
-                snprintf(result, 134, "%s (%s)", modelName, coresAndThreads);
-            else
-                strncpy(result, modelName, 133);
-        }
-
-        // If the processor count is higher than the thread count, it's likely
-        // we're dealing with a multi-CPU configuration
-        if (processorInt > threadsInt && threadsInt > 0)
-        {
-            int cpus = processorInt / threadsInt;
-            char tmp[134];
-            snprintf(tmp, 134, "%dx %s", cpus, result);
-            strncpy(result, tmp, 133);
-        }
     }
-    else 
+
+
+
+    return result;
+}
+
+/**
+ * Builds a complete CPU string from given CPU data. It also applies various
+ * corrections to handle quirks and edgecases, and tries to differentiate
+ * processors with similar data.
+ * @param cpu A pointer to a CPU_DATA struct containing the data to intepret
+ * @return String containing the CPU's name and core/thread specs; empty string
+ *         if unknown/error
+ */
+char *interpretCPU(CPU_DATA *cpu)
+{
+    if (!cpu) return NULL;
+
+    const int RESULT_LEN = NAME_LEN * 2;
+    char *result = malloc(RESULT_LEN);
+    if (!result) return NULL;
+    result[0] = '\0';
+
+
+
+    // Run through our x86-specific quirks, distinctions and manipulation
+    if (cpu->arch == X86 && cpu->vendor && cpu->name && (cpu->vendor[0] != '\0' || cpu->name[0] != '\0'))
     {
-        free(result);
-        free(cpu);
-        free(vendor);
-        free(implementer);
-        free(isa);
-        free(model);
-        free(modelName);
-        free(stepping);
-        free(cacheSize);
-        free(architecture);
-        free(processor);
-        free(cores);
-        free(threads);
-        free(hart);
-        free(fpu);
-        return NULL;
+        // Check if model name lacks the vendor name and if we need to try
+        // adding it in manually
+        if ((cpu->vendor[0] != '\0' && cpu->vendor[0] != 'u') && (cpu->name[0] != '\0' && cpu->name[0] != 'u'))
+        {
+            if (!strstr(cpu->name, "Intel") && !strstr(cpu->name, "AMD") && !strstr(cpu->name, "Cyrix") && !strstr(cpu->name, "IDT") && !strstr(cpu->name, "VIA") && !strstr(cpu->name, "Transmeta"))
+            {
+                char *tmp = malloc(NAME_LEN);
+                if (tmp)
+                {
+                    if (strstr(cpu->vendor, "Intel") || strstr(cpu->vendor, "Iotel"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "Intel", cpu->name);
+                    else if (strstr(cpu->vendor, "AMD"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "AMD", cpu->name);
+                    else if (strstr(cpu->vendor, "Cyrix"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "Cyrix", cpu->name);
+                    else if (strstr(cpu->vendor, "Centaur"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "IDT/Centaur", cpu->name);
+                    else if (strstr(cpu->vendor, "VIA"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "VIA", cpu->name);
+                    else if (strstr(cpu->vendor, "Transmeta") || strstr(cpu->vendor, "TM"))
+                        snprintf(tmp, NAME_LEN, "%s %s", "Transmeta", cpu->name);
+                    else
+                        snprintf(tmp, NAME_LEN, "%s %s", cpu->vendor, cpu->name);
+                    
+                    strncpy(cpu->name, tmp, NAME_LEN);
+                    free(tmp);
+                    cpu->name[NAME_LEN-1] = '\0';
+                }
+            }
+        }
+
+        // If we have a K6, we will try to distinguish if it's a Model 6 or
+        // Model 7
+        if (strstr(cpu->name, "AMD-K6tm w"))
+        {
+            if (cpu->model == 6)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "AMD K6 Model 6", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+            else if (cpu->model == 7)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "AMD K6 Model 7", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+        }
+
+        // If we have a supposed K6-III, it may actually be a K6-2+ or
+        // K6-III+, and we may be able to tell from the stepping
+        if (strstr(cpu->name, "AMD-K6(tm)-III P"))
+        {
+            if (cpu->stepping == 0)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "AMD K6-III+", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+            else if (cpu->stepping == 4)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "AMD K6-2+", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+        }
+
+        // If we have a Cx486Dxxx with FPU, make sure 387 is included in
+        // the model name
+        if ((strstr(cpu->name, "Cx486DLC") || strstr(cpu->name, "Cx486DRx2")) && cpu->hasFPU)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "%s + 387", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
+        // If we have a Cx486S with FPU, make sure 487 is included in the
+        // model name
+        if (strstr(cpu->name, "Cx486S") && cpu->hasFPU)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "%s + 487", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
+        // If we have a supposed WinChip 2-3D, we may be able to tell if
+        // its a WinChip 2A from the stepping
+        if (strstr(cpu->name, "WinChip 2-3D") && cpu->stepping == 7)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "IDT WinChip 2A", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
+        // If we have for certain an Intel 486SX with FPU, make sure 487 is
+        // included in the model name
+        if (strstr(cpu->name, "486") && strstr(cpu->name, "SX") && cpu->hasFPU)
+        {
+            char tmp[NAME_LEN];
+            snprintf(tmp, NAME_LEN, "%s + 487", cpu->name);
+            strncpy(cpu->name, tmp, NAME_LEN-1);
+            cpu->name[NAME_LEN-1] = '\0';
+        }
+
+        // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
+        // and Celeron (Covington) have basically the same CPU ID, but we
+        // can tell *some* apart from the cache size. For sure: 32KB =
+        // Celeron; 512KB = Pentium II; 1024/2048KB = Pentium II Xeon. The
+        // 512KB Xeon cannot presently be distinguished, though...
+        if (strstr(cpu->name, "Deschutes"))
+        {
+            if (cpu->cacheSize == 32)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "Intel Celeron (Covington)", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+            else if (cpu->cacheSize == 512)
+            {
+                // Don't need to do anything, yet... At some point, we will try
+                // to distinguish standard II and II Xeon at this cache amount
+            }
+            else if (cpu->cacheSize > 1024)
+            {
+                char tmp[NAME_LEN];
+                snprintf(tmp, NAME_LEN, "Intel Pentium II Xeon", cpu->name);
+                strncpy(cpu->name, tmp, NAME_LEN-1);
+                cpu->name[NAME_LEN-1] = '\0';
+            }
+        }
+
+        // If we have a vendorless and revisionless 486, we can at least
+        // infer if its purely 486SX, or a 486DX, 487SX (true 486SX +
+        // 487SX) or 486SX + 387 (eg, IBM 486BLx/486SLCx  + 387), from the
+        // presence of an FPU
+        if ((cpu->vendor[0] == '\0' || cpu->vendor[0] == 'u') && cpu->name[0] != '\0' && strcmp(cpu->name, "486") == 0)
+        {
+            if (cpu->hasFPU)
+                snprintf(cpu->name, NAME_LEN-1, "486DX/487SX/486SX + 387");
+            else
+                snprintf(cpu->name, NAME_LEN-1, "486SX");
+        }
     }
 
 
 
-    int coreCount = 0;
-    if (cores && cores[0] != '\0')
-        coreCount = (int)strtol(cores, NULL, 10);
+    // Use the CPU name as the core of the result string
+    strncpy(result, cpu->name, RESULT_LEN-1);
 
-    free(cpu);
-    free(vendor);
-    free(implementer);
-    free(isa);
-    free(model);
-    free(modelName);
-    free(stepping);
-    free(cacheSize);
-    free(architecture);
-    free(processor);
-    free(cores);
-    free(threads);
-    free(hart);
-    free(fpu);
 
-    char *cleanedCPU = cleanCPUName(result, 134, coreCount);
-    strncpy(result, cleanedCPU, 133);
-    free(cleanedCPU);
+
+    // If we have a vendor name, add it to the start (not for x86 since that is
+    // handled above)
+    if (cpu->arch != X86 && cpu->vendor && cpu->vendor[0] != '\0' && cpu->vendor[0] != 'u')
+    {
+        char *tmp = malloc(RESULT_LEN);
+        snprintf(tmp, RESULT_LEN, "%s %s", cpu->vendor, result);
+        strncpy(result, tmp, RESULT_LEN-1);
+        free(tmp);
+    }
+
+
+
+    // Compile our cores/threads substring
+    char coresAndThreads[16] = "";
+
+    // If we don't have a cores value, set it to the same as threads
+    // so we don't try to show them both separately later
+    if (cpu->cores <= 0 && cpu->threads > 0)
+        cpu->cores = cpu->threads;
+
+    // If we don't have cores or threads, we use the processor index count in
+    // its place
+    if (cpu->cores <= 0 && cpu->threads <= 0 && cpu->index > 0)
+    {
+        // We don't have a good way to tell cores from threads for POWER
+        // CPUs at the moment, so let's not imply our value is for cores
+        if (cpu->arch == POWER)
+            snprintf(coresAndThreads, 16, "%dT", cpu->index);
+        else
+            snprintf(coresAndThreads, 16, "%dC", cpu->index);
+    }
+    // If cores and threads are the same value, just show cores
+    else if (cpu->cores > 0 && cpu->cores == cpu->threads)
+        snprintf(coresAndThreads, 16, "%dC", cpu->cores);
+    // If cores and threads are different values, show both
+    else if (cpu->cores > 0 && cpu->threads > 0)
+        snprintf(coresAndThreads, 16, "%dC/%dT", cpu->cores, cpu->threads);
+
+    // If successful, add the substring to the result string
+    if (coresAndThreads[0] != '\0')
+    {
+        // If our result string has vendor and/or name, we add our cores/
+        // threads substring on the end
+        if (result[0] != '\0')
+        {
+            char *tmp = malloc(RESULT_LEN);
+            snprintf(tmp, RESULT_LEN, "%s (%s)", result, coresAndThreads);
+            strncpy(result, tmp, RESULT_LEN-1);
+            free(tmp);
+        }
+        // If our result is blank, we make it our cores/threads substring
+        else
+            strncpy(result, coresAndThreads, RESULT_LEN-1);
+    }
+
+    // If the processor count is higher than the thread count, it's likely
+    // we're dealing with a multi-CPU configuration
+    if (cpu->index > cpu->threads && cpu->threads > 0)
+    {
+        int cpus = cpu->index / cpu->threads;
+        char tmp[RESULT_LEN];
+        snprintf(tmp, RESULT_LEN, "%dx %s", cpus, result);
+        strncpy(result, tmp, RESULT_LEN-1);
+    }
+
+
+
+    // Clean up the result string
+    char *cleanedResult = cleanCPUName(result, RESULT_LEN, cpu->cores);
+    strncpy(result, cleanedResult, RESULT_LEN-1);
+    free(cleanedResult);
 
     return result;
 }
