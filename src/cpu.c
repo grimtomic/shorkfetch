@@ -73,19 +73,31 @@ char *cleanCPUName(const char *input, size_t inputSize)
     }
 
     // Remove clock speed from CPU name
-    if (strstr(result, "@") && strstr(result, "Hz"))
+    char *ghz = strstr(result, "GHz");
+    if (ghz)
     {
-        char *at = strstr(result, " @");
-        if (at)
+        // Walk back from "GHz" to find the beginning of the frequency substring
+        char *at = ghz;
+        while (at > result && ((*(at-1) >= '0' && *(at-1) <= '9') || *(at-1) == '.'))
+            at--;
+
+        // Take into account possible " @ " or " " in front
+        if (at > result && *(at-1) == ' ')
         {
-            char *leftBrac = strchr(at, '(');
-            // If brackets for core/thread count present, selective removal
-            if (leftBrac && leftBrac > at)
-                memmove(at, leftBrac - 1, strlen(leftBrac - 1) + 1);
-            // If no brackets for core/thread count, just nuke @ and after
-            else
-                *at = '\0';
+            at--;
+            if (at > result && *(at-1) == '@')
+                at--;
+            if (at > result && *(at-1) == ' ')
+                at--;
         }
+
+        char *leftBrac = strchr(ghz + 3, '(');
+        // If brackets for core/thread count present, selective removal
+        if (leftBrac)
+            memmove(at, leftBrac - 1, strlen(leftBrac - 1) + 1);
+        // If no brackets for core/thread count, just nuke
+        else
+            *at = '\0';
     }
 
     // Shorten "Advanced Micro Devices" to "AMD"

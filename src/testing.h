@@ -125,6 +125,12 @@ void testInterpretGPU(void)
     
     GPU_IDS gpus[] = {
         {
+            "ATI 68800AX [Graphics Ultra Pro PCI]",
+            0x1002,
+            0x4158,
+            0x00
+        },
+        {
             "ATI FirePro V (FireGL V) Graphics Adapter",
             0x1002,
             0x6784,
