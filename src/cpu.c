@@ -743,7 +743,7 @@ char *interpretCPU(CPU_DATA *cpu)
             cpu->name[NAME_LEN-1] = '\0';
         }
 
-        // The Pentium OverDrive for Socket 3 are guaranteed to be P54C, so
+        // The Pentium OverDrive for Socket 3 is guaranteed to be P54C, so
         // let's report that to distinguish it from P5 OverDrives for Socket 4
         if (strstr(cpu->name, "OverDrive PODP5V") && cpu->freq < 84)
         {
@@ -790,7 +790,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 // Don't need to do anything, yet... At some point, we will try
                 // to distinguish standard II and II Xeon at this cache amount
             }
-            else if (cpu->cacheSize > 1024)
+            else if (cpu->cacheSize >= 1024)
             {
                 char tmp[NAME_LEN];
                 snprintf(tmp, NAME_LEN, "Intel Pentium II Xeon", cpu->name);
