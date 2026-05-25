@@ -136,7 +136,8 @@ static const struct Replacement INTEL_REPLACES[] = {
     { "Pentium 75 - 200",       "Pentium (P54C)",       0 },
     { "Pentium 4 - M",          "Pentium 4-M",          0 },
     { "Core2",                  "Core 2",               0 },
-    { "Generation Core",        "Gen Core",             0 }
+    { "Generation Core",        "Gen Core",             0 },
+    { " Dual-Core",             "",                     0 }     // See Intel Pentium E5300
 };
 static const int INTEL_REPLACES_LEN = sizeof(INTEL_REPLACES) / sizeof(INTEL_REPLACES[0]);
 
