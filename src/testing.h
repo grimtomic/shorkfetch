@@ -345,7 +345,7 @@ void testInterpretScreen(void)
         float diagMm = fSqrt(screens[i].physX * screens[i].physX + screens[i].physY * screens[i].physY);
         float diagIn = (float)diagMm / 25.4f;
         if (screen && screen[0] != '\0')
-            printf("\033[31m%f\"\033[0m -> \033[32m%s\033[0m\n", diagIn, screen, screen);
+            printf("\033[31m%f\"\033[0m -> \033[32m%s\033[0m\n", diagIn, screen);
         free(screen);
     }
 }
