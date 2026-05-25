@@ -859,23 +859,34 @@ char *interpretCPU(CPU_DATA *cpu)
                 }
             }
             // Core (Yonah) may not have "Core" in their name, so we will try to
-            // add it and a "Solo" or "Duo" suffix depending on the core count 
-            else if (cpu->model == 14 && (cpu->cores > 0 || cpu->index > 0))
+            // add it and a "Solo" or "Duo" suffix depending on the core count
+            // SEE: Core Solo T1300, Core Duo T2300
+            else if (cpu->model == 14 && (cpu->cores > 0 || cpu->index > 0) && strstr(cpu->name, "(R) CPU"))
             {
-                if (strstr(cpu->name, "Intel(R) CPU") && (cpu->cores > 0 || cpu->index > 0))
-                {
-                    char *tmp = NULL;
-                    if (cpu->cores == 1 || cpu->index == 1)
-                        tmp = findReplace(cpu->name, NAME_LEN, "CPU           T", "Core Solo T");
-                    else if (cpu->cores == 2 || cpu->index == 2)
-                        tmp = findReplace(cpu->name, NAME_LEN, "CPU           T", "Core Duo T");
+                char *tmp = NULL;
+                if (cpu->cores == 1 || cpu->index == 1)
+                    tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Solo ");
+                else if (cpu->cores == 2 || cpu->index == 2)
+                    tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Duo ");
 
-                    if (tmp)
-                    {
-                        strncpy(cpu->name, tmp, NAME_LEN - 1);
-                        cpu->name[NAME_LEN-1] = '\0';
-                        free(tmp);
-                    }
+                if (tmp)
+                {
+                    strncpy(cpu->name, tmp, NAME_LEN - 1);
+                    cpu->name[NAME_LEN-1] = '\0';
+                    free(tmp);
+                }
+            }
+            // Mobile Core 2 Duo (Merom) may not have "Duo" in their name, so
+            // we will try to add it in
+            // SEE: Core 2 Duo T7400
+            else if (cpu->model == 15 && (cpu->cores == 2 || cpu->index == 2) && strstr(cpu->name, "2 CPU"))
+            {
+                char *tmp = findReplace(cpu->name, NAME_LEN, "CPU         ", "Duo ");
+                if (tmp)
+                {
+                    strncpy(cpu->name, tmp, NAME_LEN - 1);
+                    cpu->name[NAME_LEN-1] = '\0';
+                    free(tmp);
                 }
             }
         }
