@@ -19,6 +19,7 @@
 
 
 
+#define CPUINFO_BUFFER_LEN  1024
 #define UARCH_LEN           128
 #define VENDOR_LEN          16
 #define NAME_LEN            128
@@ -63,6 +64,8 @@ typedef struct {
     int cacheSize;
     // Floating-point unit present (0=n;1=y) (x86)
     int hasFPU;
+    // Hyper-Threading present (0=n;1=y) (x86)
+    int hasHT;
 } CPU_DATA;
 
 

@@ -313,7 +313,8 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
         .cores = -1,
         .threads = -1,
         .cacheSize = -1,
-        .hasFPU = -1
+        .hasFPU = -1,
+        .hasHT = -1
     };
 
 
@@ -321,7 +322,7 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
     FILE *fStream = fopen(cpuInfo, "r");
     if (fStream)
     {
-        char buffer[256];
+        char buffer[CPUINFO_BUFFER_LEN];
         while (fgets(buffer, sizeof(buffer), fStream))
         {
             // RISC-V: get micro architecture (uarch)
@@ -440,7 +441,7 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
             // RISC-V: get instruction set architecture (ISA)
             else if (!result->name && strncmp(buffer, "isa", 3) == 0)
             {
-                char *extract = extractFromPoint(buffer, 128, ':', 2);
+                char *extract = extractFromPoint(buffer, CPUINFO_BUFFER_LEN, ':', 2);
                 if (extract && extract[0] == 'r' && extract[1] == 'v')
                 {
                     if (result->arch == UNKNOWN)
@@ -601,6 +602,22 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
                         result->hasFPU = 1;
                     else if (strncmp(extract, "no", 2) == 0)
                         result->hasFPU = 0;
+                    free(extract);
+                }
+            }
+            // x86: get whether Hyper-Threading is present
+            else if (result->hasHT == -1 && strncmp(buffer, "flags", 5) == 0)
+            {
+                char *extract = extractFromPoint(buffer, CPUINFO_BUFFER_LEN, ':', 2);
+                if (extract)
+                {
+                    if (result->arch == UNKNOWN)
+                        result->arch = X86;
+
+                    if (strstr(extract, " ht ") != NULL)
+                        result->hasHT = 1;
+                    else 
+                        result->hasHT = 0;
                     free(extract);
                 }
             }
@@ -828,7 +845,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 }
             }
         }
-        // Pentium/P6 and later
+        // Pentium/P6 era and descendants
         else if (cpu->family == 6)
         {
             // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon

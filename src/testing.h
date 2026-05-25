@@ -103,6 +103,7 @@ void testGetCPU(void)
             printf("    threads:   %d\n", cpu->threads);
             printf("    cacheSize: %d\n", cpu->cacheSize);
             printf("    hasFPU:    %d\n", cpu->hasFPU);
+            printf("    hasHT:     %d\n", cpu->hasHT);
         }
 
         free(cpu->uarch);
