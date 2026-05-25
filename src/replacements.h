@@ -4,7 +4,11 @@
     ######################################################
     ## CPU and GPU name substring replacements used to  ##
     ## help clean up messy data from /proc/cpuinfo or   ##
-    ## pci.ids.                                         ##
+    ## pci.ids in cleanCPUName and cleanGPUName.        ##
+    ## Regarding CPUs, cpu.c also does CPU name         ##
+    ## cleaning, but only at the vendor-name level or   ##
+    ## if targetting specific family, model and/or      ##
+    ## stepping numbers. Otherwise, it goes in here.    ##
     ######################################################
     ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
     ######################################################
@@ -32,9 +36,14 @@ static const struct Replacement AMD_REPLACES[] = {
     { "Am5x86-WT",              "Am5x86",           0 },
     { "K6 3D+",                 "K6-III",           0 },
     { "K6 3D",                  "K6-2",             0 },
-    { "K6-III ",                 "K6-2+/K6-III+",   1 },
+    { "K6-III ",                "K6-2+/K6-III+",    1 },
     { "AMD-",                   "AMD ",             0 },
-    { "RYZEN AI MAX+",          "Ryzen AI Max+",    0 }
+    { " Dual Core",             "",                 0 },    // For AMD Athlon
+    { " Quad Core",             "",                 0 },    // See AMD Athlon X4 760K
+    { " Quad-Core",             "",                 0 },    // See AMD FX-4300
+    { " Six-Core",              "",                 0 },    // See AMD FX-6300
+    { " Eight-Core",            "",                 0 },    // See AMD FX-8320
+    { "RYZEN AI MAX",           "Ryzen AI Max",     0 }     // See AMD Ryzen AI Max+ 395
 };
 static const int AMD_REPLACES_LEN = sizeof(AMD_REPLACES) / sizeof(AMD_REPLACES[0]);
 
@@ -102,22 +111,16 @@ static const char *DELETIONS[] =
     "tm",
     "(TM)",
     " APU",
-    " Dual Core",                       // For AMD Athlon
     " Controller",
     " Corporation",
     " CPU",
-    " Eight-Core",                      // For AMD FX
     " Family",
     "Genuine ",
     " Ltd.",
     " processor",
     " Processor",
-    " Quad Core",                       // For AMD Athlon
-    " Quad-Core",                       // For AMD FX
-    " Six-Core",                        // For AMD FX
     " Technologies",                    // For VIA
     " Technology LLC",                  // For Loongson
-    " w/ multimedia extensions",        // For AMD K6
     " 2x Core/Bus Clock",               // For Cyrix 6x86
     " 3x Core/Bus Clock"                // For Cyrix 5x86
 };
