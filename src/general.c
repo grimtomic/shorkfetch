@@ -13,7 +13,6 @@
 
 
 
-#include "colours.h"
 #include "general.h"
 #include "globals.h"
 
@@ -362,35 +361,6 @@ float fSqrt(float x)
     }
 
     return result;
-}
-
-/**
- * Validates if the WITH_COL value supplied matches a known colour. If not, bright cyan is used as a fallback.
- * @return ANSI escape code for colour; empty string if COL=OFF
- */
-char *getAccentColour(void)
-{
-#ifdef COL
-    char *colour = STR(COL);
-    if (strcmp(colour, "BLACK") == 0) return "\033[" COL_BLACK "m";
-    if (strcmp(colour, "BLUE") == 0) return "\033[" COL_BLUE "m";
-    if (strcmp(colour, "BOLD_BLUE") == 0) return "\033[" COL_BOLD_BLUE "m";
-    if (strcmp(colour, "BOLD_CYAN") == 0) return "\033[" COL_BOLD_CYAN "m";
-    if (strcmp(colour, "BOLD_GREEN") == 0) return "\033[" COL_BOLD_GREEN "m";
-    if (strcmp(colour, "BOLD_MAGENTA") == 0) return "\033[" COL_BOLD_MAGENTA "m";
-    if (strcmp(colour, "BOLD_RED") == 0) return "\033[" COL_BOLD_RED "m";
-    if (strcmp(colour, "BOLD_WHITE") == 0) return "\033[" COL_BOLD_WHITE "m";
-    if (strcmp(colour, "BOLD_YELLOW") == 0) return "\033[" COL_BOLD_YELLOW "m";
-    if (strcmp(colour, "CYAN") == 0) return "\033[" COL_CYAN "m";
-    if (strcmp(colour, "GREEN") == 0) return "\033[" COL_GREEN "m";
-    if (strcmp(colour, "GREY") == 0) return "\033[" COL_GREY "m";
-    if (strcmp(colour, "MAGENTA") == 0) return "\033[" COL_MAGENTA "m";
-    if (strcmp(colour, "OFF") == 0) return "";
-    if (strcmp(colour, "RED") == 0) return "\033[" COL_RED "m";
-    if (strcmp(colour, "WHITE") == 0) return "\033[" COL_WHITE "m";
-    if (strcmp(colour, "YELLOW") == 0) return "\033[" COL_YELLOW "m";
-#endif
-    return "\033[" COL_BOLD_CYAN "m";
 }
 
 /**

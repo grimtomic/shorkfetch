@@ -37,7 +37,6 @@ char *findErase(const char *, const size_t, const char *);
 char *findReplace(const char *, const size_t, const char *, const char *);
 int formatNewLines(char *, int, char *, int);
 float fSqrt(float);
-char *getAccentColour(void);
 Process getParentProcess(int);
 struct winsize getTerminalSize(void);
 int isProgramInstalled(char *, int);

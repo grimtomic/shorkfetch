@@ -2,7 +2,8 @@
     ######################################################
     ##            SHORK UTILITY - SHORKFETCH            ##
     ######################################################
-    ## Global variables                                 ##
+    ## Functions for reading and writing user settings  ##
+    ## to a configuration file                          ##
     ######################################################
     ## Licence: GNU GENERAL PUBLIC LICENSE Version 3    ##
     ######################################################
@@ -12,16 +13,11 @@
 
 
 
-#include "globals.h"
+#ifndef SHORKCONF
+#define SHORKCONF
 
-#include <string.h>
+int deleteConf(void);
+void readConf(char*, char**, int*, char**, int*, int*, int*);
+void writeConf(char, char*, int, char*, int, int, int);
 
-
-
-char *COLOUR = NULL;
-int COMPACT = 0;
-char* HOME;
-struct winsize TERM_SIZE;
-int WAYLAND_PRESENT;
-int X11_PRESENT;
-char *XDG_CURRENT_DESKTOP;
+#endif

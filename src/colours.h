@@ -33,7 +33,8 @@
 #define COL_WHITE           "0;37"
 #define COL_YELLOW          "0;33"
 
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
+
+
+char *validateColour(char*);
 
 #endif

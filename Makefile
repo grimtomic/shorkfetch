@@ -6,14 +6,6 @@ STRIP ?= strip
 CFLAGS += -I.
 LDFLAGS += -static
 
-ifdef COL
-    CFLAGS += -DCOL=$(COL)
-endif
-
-ifdef NO_ART
-	CFLAGS += -DNO_ART
-endif
-
 ifdef TESTS
 	CFLAGS += -DTESTS
 endif
