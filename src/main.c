@@ -68,10 +68,6 @@ void showHelp(void)
     formatNewLines(compact, TERM_SIZE.ws_col, "                ", 0);
     printf("%s", compact);
 
-    char delete[80] = "-d, --delete    Deletes the custom configuration file and exits\n";
-    formatNewLines(delete, TERM_SIZE.ws_col, "                ", 0);
-    printf("%s", delete);
-
     char help[70] = "-h, --help      Displays help information and exits\n";
     formatNewLines(help, TERM_SIZE.ws_col, "                ", 0);
     printf("%s", help);
@@ -83,6 +79,10 @@ void showHelp(void)
     char noArt[100] = "-na, --no-art   Disables the SHORK ASCII art\n";
     formatNewLines(noArt, TERM_SIZE.ws_col, "                ", 0);
     printf("%s", noArt);
+
+    char reset[80] = "-r, --reset     Resets to default, deletes configuration file and exits\n";
+    formatNewLines(reset, TERM_SIZE.ws_col, "                ", 0);
+    printf("%s", reset);
 
     char save[100] = "-s, --save      Saves chosen options to a custom configuration file\n";
     formatNewLines(save, TERM_SIZE.ws_col, "                ", 0);
@@ -177,17 +177,6 @@ int main(int argc, char *argv[])
         }
         else if ((strcmp(argv[i], "-co") == 0) || (strcmp(argv[i], "--compact") == 0))
             COMPACT = 1;
-        else if ((strcmp(argv[i], "-d") == 0) || (strcmp(argv[i], "--delete") == 0))
-        {
-            int result = deleteConf();
-            if (result)
-                printf("SHORKFETCH custom configuration file deleted\n");
-            else
-                printf("WARNING: SHORKFETCH custom configuration file not present\n");
-            free(COLOUR);
-            free(fields);
-            return 0;
-        }
         else if (strncmp(argv[i], "-f", 2) == 0 || strncmp(argv[i], "--fields", 8) == 0)
         {
             // Find "=" as our needle
@@ -213,6 +202,17 @@ int main(int argc, char *argv[])
             showShork = 0;
         else if ((strcmp(argv[i], "-ni") == 0) || (strcmp(argv[i], "--no-ip") == 0))
             noIP = 1;
+        else if ((strcmp(argv[i], "-r") == 0) || (strcmp(argv[i], "--reset") == 0))
+        {
+            int result = deleteConf();
+            if (result)
+                printf("SHORKFETCH configuration reset\n");
+            else
+                printf("WARNING: SHORKFETCH configuration already default\n");
+            free(COLOUR);
+            free(fields);
+            return 0;
+        }
         else if ((strcmp(argv[i], "-s") == 0) || (strcmp(argv[i], "--save") == 0))
             saveConf = 1;
         else if ((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--version") == 0))

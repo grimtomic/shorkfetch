@@ -65,10 +65,10 @@ Usage: shorkfetch [OPTIONS]
 * `-b`, `--bullets`: Uses bullet points instead of field headings; can also be used to specify a custom character
 * `-cl`, `--colour`: Specifies a custom accent colour; no assignment returns the current colour
 * `-co`, `--compact`: Compacts field names (if not using bullets) and field values
-* `-d`, `--delete`: Deletes the configuration file and exits
 * `-f`, `--fields`: Specifies a custom fields list and order; no assignment returns list of current fields
 * `-h`, `--help`: Shows help information and exits
 * `-na`, `--no-art`: Disables the SHORK ASCII art (if compiled with art support)
+* `-r`, `--reset`: Resets to default, deletes configuration file and exits
 * `-s`, `--save`: Saves chosen options to a configuration file
 * `-v`, `--version`: Displays version number and exits
 
@@ -110,7 +110,7 @@ When customising SHORKFETCH with the options above, you can use the `--save` opt
 
     ~/.config/shorkutils/shorkfetch.conf
 
-To reset SHORKFETCH to its default configuration, simply run with the `--delete` option.
+To reset SHORKFETCH to its default configuration, simply run with the `--reset` option.
 
 
 
