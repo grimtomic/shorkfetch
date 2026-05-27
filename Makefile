@@ -25,6 +25,8 @@ install: shorkfetch
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/shorkfetch
+	rm -f $(HOME)/.config/shorkutils/shorkfetch.conf
+	rm -f /home/$(SUDO_USER)/.config/shorkutils/shorkfetch.conf
 
 clean:
 	rm -f shorkfetch

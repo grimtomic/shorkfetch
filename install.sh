@@ -64,4 +64,4 @@ else
 fi
 
 shorkfetch
-    echo -e "${GREEN}All done! :) Run: shorkfetch${RESET}"
+echo -e "${GREEN}All done! :) Run: shorkfetch${RESET}"
