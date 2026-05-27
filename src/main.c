@@ -14,7 +14,7 @@
 
 
 
-static const char *VERSION = "0.3-wip";
+static const char *VERSION = "0.3.0";
 
 
 
