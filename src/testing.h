@@ -98,6 +98,7 @@ void testGetCPU(void)
             printf("    model:     %d\n", cpu->model);
             printf("    stepping:  %d\n", cpu->stepping);
             printf("    freq:      %.0f\n", cpu->freq);
+            printf("    maxPhysID: %d\n", cpu->maxPhysID);
             printf("    index:     %d\n", cpu->index);
             printf("    cores:     %d\n", cpu->cores);
             printf("    threads:   %d\n", cpu->threads);

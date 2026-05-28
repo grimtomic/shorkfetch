@@ -56,3 +56,4 @@ dkms.conf
 
 # shorkfetch specific
 shorkfetch
+testing/excluded

@@ -310,6 +310,7 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
         .stepping = -1,
         .freq = -1,
         .index = 0,
+        .maxPhysID = -1,
         .cores = -1,
         .threads = -1,
         .cacheSize = -1,
@@ -527,6 +528,17 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
                 if (extract)
                 {
                     result->index = (atoi(extract) + 1);
+                    free(extract);
+                }
+            }
+            // x86: get maximum physical ID (must repeat to get the final
+            // value)
+            else if (strncmp(buffer, "physical id", 11) == 0)
+            {
+                char *extract = extractFromPoint(buffer, 5, ':', 2);
+                if (extract)
+                {
+                    result->maxPhysID = (atoi(extract) + 1);
                     free(extract);
                 }
             }
@@ -990,9 +1002,20 @@ char *interpretCPU(CPU_DATA *cpu)
         }
     }
 
-    // If the processor count is higher than the thread count, it's likely
-    // we're dealing with a multi-CPU configuration
-    if (cpu->index > cpu->threads && cpu->threads > 0)
+
+
+    // If the maximum physical ID found is more than 1, we should be dealing
+    // with a multi-CPU configuration and need to indicate this
+    if (cpu->maxPhysID > 1)
+    {
+        char tmp[RESULT_LEN];
+        snprintf(tmp, RESULT_LEN, "%dx %s", cpu->maxPhysID, result);
+        strncpy(result, tmp, RESULT_LEN-1);
+    }
+    // If maxPhysID was not computed or not x86, we can also infer likely
+    // multi-CPU configuration when the processor index count is higher than
+    // the thread count
+    else if (cpu->index > cpu->threads && cpu->threads > 0)
     {
         int cpus = cpu->index / cpu->threads;
         char tmp[RESULT_LEN];

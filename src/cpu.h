@@ -56,6 +56,8 @@ typedef struct {
     float freq;
     // Processor index count (ARM, POWER, some RISC-V, x86)
     int index;
+    // Maximum physical ID (x86)
+    int maxPhysID;
     // Physical core count (x86)
     int cores;
     // Logical thread count (RISC-V, x86)
