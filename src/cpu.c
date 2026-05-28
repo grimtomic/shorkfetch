@@ -860,13 +860,14 @@ char *interpretCPU(CPU_DATA *cpu)
         // Pentium/P6 era and descendants
         else if (cpu->family == 6)
         {
-            // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
-            // and Celeron (Covington) have basically the same CPU ID, but we
-            // can tell *some* apart from the cache size. For sure: 32KB =
-            // Celeron; 512KB = Pentium II; 1024/2048KB = Pentium II Xeon. The
-            // 512KB Xeon cannot presently be distinguished, though...
+            // Deschutes & Covington
             if (cpu->model == 5)
             {
+                // Pentium II (Deschutes) and the Deschutes-based Pentium II Xeon
+                // and Celeron (Covington) have basically the same CPU ID, but we
+                // can tell *some* apart from the cache size. For sure: 32KB =
+                // Celeron; 512KB = Pentium II; 1024/2048KB = Pentium II Xeon. The
+                // 512KB Xeon cannot presently be distinguished, though...
                 if (cpu->cacheSize == 32)
                 {
                     char tmp[NAME_LEN];
@@ -887,32 +888,16 @@ char *interpretCPU(CPU_DATA *cpu)
                     cpu->name[NAME_LEN-1] = '\0';
                 }
             }
-            // Core (Yonah) may not have "Core" in their name, so we will try to
-            // add it and a "Solo" or "Duo" suffix depending on the core count
-            // SEE: Core Solo T1300, Core Duo T2300
-            else if (cpu->model == 14 && (cpu->cores > 0 || cpu->index > 0) && strstr(cpu->name, "(R) CPU"))
+            // Banias
+            else if (cpu->model == 9)
             {
-                char *tmp = NULL;
-                if (cpu->cores == 1 || cpu->index == 1)
-                    tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Solo ");
-                else if (cpu->cores == 2 || cpu->index == 2)
-                    tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Duo ");
-
-                if (tmp)
+                // Both generations of Pentium M and related Celeron M do not
+                // distinguish themselves in their model names nor model numbers,
+                // so we add "(Banias)" to the first gen's name to distinguish it
+                // from second-gen Dothan
+                if (strstr(cpu->name, "(R) M p"))
                 {
-                    strncpy(cpu->name, tmp, NAME_LEN - 1);
-                    cpu->name[NAME_LEN-1] = '\0';
-                    free(tmp);
-                }
-            }
-            else if (cpu->model == 15 && (cpu->cores == 2 || cpu->index == 2))
-            {
-                // Some Merom-based Pentium Dual-Cores have a rogue "Dual" in
-                // their name
-                // SEE: Pentium T3200
-                if (strstr(cpu->name, "Dual  CPU"))
-                {
-                    char *tmp = findReplace(cpu->name, NAME_LEN, "Dual  CPU", " ");
+                char *tmp = findReplace(cpu->name, NAME_LEN, "M processor", "M (Banias)");
                     if (tmp)
                     {
                         strncpy(cpu->name, tmp, NAME_LEN - 1);
@@ -920,17 +905,78 @@ char *interpretCPU(CPU_DATA *cpu)
                         free(tmp);
                     }
                 }
-                // Mobile Core 2 Duo (Merom) may not have "Duo" in their name,
-                // so we will try to add it in
-                // SEE: Core 2 Duo T7400
-                else if (strstr(cpu->name, "2 CPU"))
+            }
+            // Dothan
+            else if (cpu->model == 13)
+            {
+                // Both generations of Pentium M and related Celeron M do not
+                // distinguish themselves in their model names nor model numbers,
+                // so we add "(Dothan)" to the second gen's name to distinguish it
+                // from first-gen Banias
+                if (strstr(cpu->name, "(R) M p"))
                 {
-                    char *tmp = findReplace(cpu->name, NAME_LEN, "CPU         ", "Duo ");
+                    char *tmp = findReplace(cpu->name, NAME_LEN, "M processor", "M (Dothan)");
                     if (tmp)
                     {
                         strncpy(cpu->name, tmp, NAME_LEN - 1);
                         cpu->name[NAME_LEN-1] = '\0';
                         free(tmp);
+                    }
+                }
+            }
+            // Yonah
+            else if (cpu->model == 14)
+            {
+                // Core (Yonah) may not have "Core" in their name, so we will try to
+                // add it and a "Solo" or "Duo" suffix depending on the core count
+                // SEE: Core Solo T1300, Core Duo T2300
+                if ((cpu->cores > 0 || cpu->index > 0) && strstr(cpu->name, "(R) CPU"))
+                {
+                    char *tmp = NULL;
+                    if (cpu->cores == 1 || cpu->index == 1)
+                        tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Solo ");
+                    else if (cpu->cores == 2 || cpu->index == 2)
+                        tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Duo ");
+
+                    if (tmp)
+                    {
+                        strncpy(cpu->name, tmp, NAME_LEN - 1);
+                        cpu->name[NAME_LEN-1] = '\0';
+                        free(tmp);
+                    }
+                }
+            }
+            // Merom
+            else if (cpu->model == 15)
+            {
+                // Core 2 Duo
+                if (cpu->cores == 2 || cpu->index == 2)
+                {
+                    // Some Merom-based Pentium Dual-Cores have a rogue "Dual" in
+                    // their name
+                    // SEE: Pentium T3200
+                    if (strstr(cpu->name, "Dual  CPU"))
+                    {
+                        char *tmp = findReplace(cpu->name, NAME_LEN, "Dual  CPU", " ");
+                        if (tmp)
+                        {
+                            strncpy(cpu->name, tmp, NAME_LEN - 1);
+                            cpu->name[NAME_LEN-1] = '\0';
+                            free(tmp);
+                        }
+                    }
+                    // Mobile Core 2 Duo (Merom) may not have "Duo" in their name,
+                    // so we will try to add it in
+                    // SEE: Core 2 Duo T7400
+                    else if (strstr(cpu->name, "2 CPU"))
+                    {
+                        char *tmp = findReplace(cpu->name, NAME_LEN, "CPU         ", "Duo ");
+                        if (tmp)
+                        {
+                            strncpy(cpu->name, tmp, NAME_LEN - 1);
+                            cpu->name[NAME_LEN-1] = '\0';
+                            free(tmp);
+                        }
                     }
                 }
             }
