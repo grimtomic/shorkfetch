@@ -1017,6 +1017,23 @@ char *interpretCPU(CPU_DATA *cpu)
                     }
                 }
             }
+            // Sandy Bridge-EP
+            else if (cpu->model == 45)
+            {
+                // Some Xeon E5 names may have a rough "0" just after the model
+                // number
+                // See: Xeon E5-2690 (the original/v1)
+                if (strstr(cpu->name, " 0 @"))
+                {
+                    char *tmp = findReplace(cpu->name, NAME_LEN, " 0 ", " ");
+                    if (tmp)
+                    {
+                        strncpy(cpu->name, tmp, NAME_LEN - 1);
+                        cpu->name[NAME_LEN-1] = '\0';
+                        free(tmp);
+                    }
+                }
+            }
         }
     }
 
