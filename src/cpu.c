@@ -930,10 +930,11 @@ char *interpretCPU(CPU_DATA *cpu)
             // Yonah
             else if (cpu->model == 14)
             {
-                // Core (Yonah) may not have "Core" in their name, so we will try to
-                // add it and a "Solo" or "Duo" suffix depending on the core count
+                // Core (Yonah) may not have "Core" in their name, so we will
+                // try to add it and a "Solo" or "Duo" suffix depending on the
+                // core count
                 // SEE: Core Solo T1300, Core Duo T2300
-                if ((cpu->cores > 0 || cpu->index > 0) && strstr(cpu->name, "(R) CPU"))
+                if (cpu->stepping == 8 && strstr(cpu->name, "Intel(R) CPU"))
                 {
                     char *tmp = NULL;
                     if (cpu->cores == 1 || cpu->index == 1)
@@ -941,6 +942,19 @@ char *interpretCPU(CPU_DATA *cpu)
                     else if (cpu->cores == 2 || cpu->index == 2)
                         tmp = findReplace(cpu->name, NAME_LEN, "CPU           ", "Core Duo ");
 
+                    if (tmp)
+                    {
+                        strncpy(cpu->name, tmp, NAME_LEN - 1);
+                        cpu->name[NAME_LEN-1] = '\0';
+                        free(tmp);
+                    }
+                }
+                // Some Yonah-based Celeron Ms only report as simply "Celeron",
+                // so we will add the "M" in if so
+                // SEE: Celeron M 215
+                else if (cpu->stepping == 8 && strstr(cpu->name, "Celeron(R) CPU"))
+                {
+                    char *tmp = findReplace(cpu->name, NAME_LEN, "Celeron(R) CPU", "Celeron M");
                     if (tmp)
                     {
                         strncpy(cpu->name, tmp, NAME_LEN - 1);
