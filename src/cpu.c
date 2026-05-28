@@ -933,7 +933,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 // Core (Yonah) may not have "Core" in their name, so we will
                 // try to add it and a "Solo" or "Duo" suffix depending on the
                 // core count
-                // SEE: Core Solo T1300, Core Duo T2300
+                // See: Core Solo T1300, Core Duo T2300
                 if (cpu->stepping == 8 && strstr(cpu->name, "Intel(R) CPU"))
                 {
                     char *tmp = NULL;
@@ -951,7 +951,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 }
                 // Some Yonah-based Celeron Ms only report as simply "Celeron",
                 // so we will add the "M" in if so
-                // SEE: Celeron M 215
+                // See: Celeron M 215
                 else if (cpu->stepping == 8 && strstr(cpu->name, "Celeron(R) CPU"))
                 {
                     char *tmp = findReplace(cpu->name, NAME_LEN, "Celeron(R) CPU", "Celeron M");
@@ -971,7 +971,7 @@ char *interpretCPU(CPU_DATA *cpu)
                 {
                     // Some Merom-based Pentium Dual-Cores have a rogue "Dual" in
                     // their name
-                    // SEE: Pentium T3200
+                    // See: Pentium T3200
                     if (strstr(cpu->name, "Dual  CPU"))
                     {
                         char *tmp = findReplace(cpu->name, NAME_LEN, "Dual  CPU", " ");
@@ -984,10 +984,30 @@ char *interpretCPU(CPU_DATA *cpu)
                     }
                     // Mobile Core 2 Duo (Merom) may not have "Duo" in their name,
                     // so we will try to add it in
-                    // SEE: Core 2 Duo T7400
+                    // See: Core 2 Duo T7400
                     else if (strstr(cpu->name, "2 CPU"))
                     {
                         char *tmp = findReplace(cpu->name, NAME_LEN, "CPU         ", "Duo ");
+                        if (tmp)
+                        {
+                            strncpy(cpu->name, tmp, NAME_LEN - 1);
+                            cpu->name[NAME_LEN-1] = '\0';
+                            free(tmp);
+                        }
+                    }
+                }
+            }
+            // Penryn
+            else if (cpu->model == 23)
+            {
+                if (cpu->stepping == 10)
+                {
+                    // ULV Pentium Dual-Core Mobile lacks both the "Pentium"
+                    // branding and the "S" in their model number
+                    // See: Pentium SU2700, Pentium SU4100
+                    if (strstr(cpu->name, "Intel(R) CPU           U"))
+                    {
+                        char *tmp = findReplace(cpu->name, NAME_LEN, "(R) CPU           ", " Pentium S");
                         if (tmp)
                         {
                             strncpy(cpu->name, tmp, NAME_LEN - 1);
