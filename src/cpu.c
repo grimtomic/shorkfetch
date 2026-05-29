@@ -1025,6 +1025,18 @@ char *interpretCPU(CPU_DATA *cpu)
                             free(tmp);
                         }
                     }
+                    // LV Core 2 Duo lacks the "S" in their model number
+                    // See: Core 2 Duo SL9600
+                    else if (strstr(cpu->name, "Duo CPU     L"))
+                    {
+                        char *tmp = findReplace(cpu->name, NAME_LEN, "CPU     ", "S");
+                        if (tmp)
+                        {
+                            strncpy(cpu->name, tmp, NAME_LEN - 1);
+                            cpu->name[NAME_LEN-1] = '\0';
+                            free(tmp);
+                        }
+                    }
                 }
             }
             // Sandy Bridge-EP
@@ -1048,7 +1060,7 @@ char *interpretCPU(CPU_DATA *cpu)
             else if (cpu->model == 58)
             {
                 // Some Xeon refreshes may have a capital "V" in their version
-                // discriminator when the marketing name should have a
+                // discriminator when the marketing names standardise a
                 // lowercase "v"
                 // See: Xeon E3-1230 v2
                 char *vNeedle = strstr(cpu->name, "V");
