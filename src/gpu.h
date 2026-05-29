@@ -284,6 +284,6 @@ static const char* INTEL_IGPUS[] = {
 
 char *cleanGPUName(const char*, const char*, const size_t);
 GPU_IDS* getGPUs(int *);
-char *interpretGPU(GPU_IDS*);
+char *interpretGPU(GPU_IDS*, const char *);
 
 #endif

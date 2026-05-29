@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
                 int pastFirstGPU = 0;
                 for (int j = 0; j < noGPUs; j++)
                 {
-                    char *gpuStr = interpretGPU(&gpus[j]);
+                    char *gpuStr = interpretGPU(&gpus[j], os);
 
                     if (gpuStr && gpuStr[0] != '\0')
                     {

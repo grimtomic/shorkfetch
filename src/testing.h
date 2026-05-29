@@ -245,7 +245,7 @@ void testInterpretGPU(void)
 
     for (int i = 0; i < noGPUs; i++)
     {
-        char *gpu = interpretGPU(&gpus[i]);
+        char *gpu = interpretGPU(&gpus[i], NULL);
         if (gpu && gpu[0] != '\0')
         {
             if (gpus[i].revision == -1)

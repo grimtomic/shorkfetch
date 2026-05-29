@@ -389,10 +389,11 @@ GPU_IDS* getGPUs(int *count)
 /**
  * @param gpu GPU_IDS struct containing detected vendor and device IDs and
  *            revision number
+ * @param os String containing the OS name (used for OS-specific checks)
  * @return String containing the GPU's assembled and cleaned full name; vendor
  *         and device IDs as hex if interpreting failed
  */
-char *interpretGPU(GPU_IDS *gpu)
+char *interpretGPU(GPU_IDS *gpu, const char *os)
 {
     const int GPU_SIZE = 256;
     char *gpuStr = malloc(GPU_SIZE);
@@ -463,6 +464,25 @@ char *interpretGPU(GPU_IDS *gpu)
         pciids = "/usr/share/misc/pci.ids";
     else if (access("/usr/share/hwdata/pci.ids", F_OK) == 0)
         pciids = "/usr/share/hwdata/pci.ids";
+    else if (os && strstr(os, "NixOS") != NULL)
+    {
+        DIR *store = opendir("/nix/store");
+        if (store)
+        {
+            static char nixPciIds[PATH_MAX];
+            struct dirent *entry;
+            while ((entry = readdir(store)) != NULL)
+            {
+                snprintf(nixPciIds, PATH_MAX, "/nix/store/%s/share/hwdata/pci.ids", entry->d_name);
+                if (access(nixPciIds, F_OK) == 0)
+                {
+                    pciids = nixPciIds;
+                    break;
+                }
+            }
+            closedir(store);
+        }
+    }
     else
     {
         snprintf(gpuStr, GPU_SIZE, "%04x:%04x", gpu->vendor, gpu->device);
