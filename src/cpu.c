@@ -542,7 +542,11 @@ CPU_DATA *getCPU(char *cpuInfo, char **gpuFromCPU)
                 char *extract = extractFromPoint(buffer, 5, ':', 2);
                 if (extract)
                 {
-                    result->maxPhysID = (atoi(extract) + 1);
+                    int val = atoi(extract) + 1;
+                    // This can sometimes count backwards, so we need this
+                    // check...
+                    if (val > result->maxPhysID)
+                        result->maxPhysID = val;
                     free(extract);
                 }
             }
