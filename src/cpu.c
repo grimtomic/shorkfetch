@@ -1044,6 +1044,16 @@ char *interpretCPU(CPU_DATA *cpu)
                     }
                 }
             }
+            // Ivy Bridge
+            else if (cpu->model == 58)
+            {
+                // Some Xeon refreshes may have a capital "V" in their version
+                // discriminator when the marketing name should have a
+                // lowercase "v"
+                // See: Xeon E3-1230 v2
+                char *vNeedle = strstr(cpu->name, "V");
+                if (vNeedle) *vNeedle = 'v';
+            }
         }
     }
 
